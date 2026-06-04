@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.changescout.domain.model.EstadoSnapshot
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EstadoEvaluacion
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
@@ -182,7 +182,7 @@ private fun ContenidoDetalleProducto(
                     subtitulo = "Resumen operativo del comportamiento comercial del producto."
                 )
 
-                if (state.snapshot == null) {
+                if (state.evaluacion == null) {
                     ChipOperativo(
                         texto = "Sin lectura cargada",
                         icono = Icons.Outlined.Schedule,
@@ -194,7 +194,7 @@ private fun ContenidoDetalleProducto(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    state.snapshot.snapshotResumen()
+                    state.evaluacion.evaluacionResumen()
                 }
 
                 Button(
@@ -242,7 +242,7 @@ private fun ContenidoDetalleProducto(
 }
 
 @Composable
-private fun SnapshotEvaluacionComercial.snapshotResumen() {
+private fun EvaluacionComercial.evaluacionResumen() {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -289,7 +289,7 @@ private fun SnapshotEvaluacionComercial.snapshotResumen() {
             contenedor = veredicto.colorContenedor()
         )
         ChipOperativo(
-            texto = estadoSnapshot.aTextoPresentable(),
+            texto = estadoEvaluacion.aTextoPresentable(),
             icono = Icons.Outlined.Schedule,
             contenedor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -331,11 +331,11 @@ private fun VeredictoComercial?.colorContenedor() = when (this) {
     null -> MaterialTheme.colorScheme.surfaceVariant
 }
 
-private fun EstadoSnapshot.aTextoPresentable(): String {
+private fun EstadoEvaluacion.aTextoPresentable(): String {
     return when (this) {
-        EstadoSnapshot.VIGENTE -> "Vigente"
-        EstadoSnapshot.OBSOLETO -> "Obsoleto"
-        EstadoSnapshot.INCONCLUSO -> "Inconcluso"
-        EstadoSnapshot.FALLIDO -> "Pendiente"
+        EstadoEvaluacion.VIGENTE -> "Vigente"
+        EstadoEvaluacion.OBSOLETO -> "Obsoleto"
+        EstadoEvaluacion.INCONCLUSO -> "Inconcluso"
+        EstadoEvaluacion.FALLIDO -> "Pendiente"
     }
 }

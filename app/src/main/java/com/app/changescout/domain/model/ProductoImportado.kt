@@ -2,9 +2,9 @@ package com.app.changescout.domain.model
 
 data class ProductoRadarItem(
     val producto: ProductoImportado,
-    val ultimoSnapshot: SnapshotEvaluacionComercial?
+    val ultimaEvaluacion: EvaluacionComercial?
 ) {
-    fun tieneSnapshot(): Boolean = ultimoSnapshot != null
+    fun tieneEvaluacion(): Boolean = ultimaEvaluacion != null
 }
 
 data class ProductoImportado(

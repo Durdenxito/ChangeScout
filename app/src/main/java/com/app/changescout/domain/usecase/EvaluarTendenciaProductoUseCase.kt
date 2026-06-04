@@ -1,10 +1,10 @@
 package com.app.changescout.domain.usecase
 
 import com.app.changescout.domain.model.ErrorOperacion
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.model.ResultadoFiltroNlp
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.repository.ProveedorFiltroNlp
 import com.app.changescout.domain.repository.ProveedorMarketplace
 import com.app.changescout.domain.repository.ProveedorTipoCambio
@@ -31,7 +31,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
     private val clasificadorVeredicto: ClasificadorVeredictoComercial,
     private val clock: Clock
 ) {
-    suspend operator fun invoke(productoId: Long): ResultadoOperacion<SnapshotEvaluacionComercial> {
+    suspend operator fun invoke(productoId: Long): ResultadoOperacion<EvaluacionComercial> {
         return try {
             evaluar(productoId)
         } catch (error: CancellationException) {
@@ -47,7 +47,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         }
     }
 
-    private suspend fun evaluar(productoId: Long): ResultadoOperacion<SnapshotEvaluacionComercial> {
+    private suspend fun evaluar(productoId: Long): ResultadoOperacion<EvaluacionComercial> {
         val producto = repositorioProducto.obtenerPorId(productoId)
             ?: return ResultadoOperacion.Fallo(
                 ErrorOperacion.SinDatos("No se encontro el producto importado.")
@@ -108,7 +108,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             null
         }
 
-        val snapshotBase = construirSnapshotBase(
+        val evaluacionBase = construirEvaluacionBase(
             productoId = producto.id,
             costoTotalUsd = costoTotalUsd,
             costoTotalPen = costoTotalPen,
@@ -122,7 +122,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             limite = LIMITE_HISTORIAL_TENDENCIA
         )
         val metricas = if (evidenciaSuficiente) {
-            motorTendencia.calcular(snapshotBase, historial)
+            motorTendencia.calcular(evaluacionBase, historial)
         } else {
             null
         }
@@ -131,19 +131,19 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             evidenciaSuficiente = evidenciaSuficiente,
             metricasTendencia = metricas
         )
-        val snapshot = snapshotBase.copy(
+        val evaluacion = evaluacionBase.copy(
             metricasTendencia = metricas,
             veredicto = veredicto
         )
 
-        repositorioEvaluacion.guardarSnapshot(snapshot)
+        repositorioEvaluacion.guardarEvaluacion(evaluacion)
 
         return causaObsolescencia?.let { causa ->
-            ResultadoOperacion.DatosObsoletos(snapshot, causa)
-        } ?: ResultadoOperacion.Exito(snapshot)
+            ResultadoOperacion.DatosObsoletos(evaluacion, causa)
+        } ?: ResultadoOperacion.Exito(evaluacion)
     }
 
-    private fun construirSnapshotBase(
+    private fun construirEvaluacionBase(
         productoId: Long,
         costoTotalUsd: Double,
         costoTotalPen: Double,
@@ -151,9 +151,9 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         filtroNlp: ResultadoFiltroNlp,
         margenNetoPct: Double?,
         causaObsolescencia: ErrorOperacion?
-    ): SnapshotEvaluacionComercial {
-        return SnapshotEvaluacionComercial(
-            snapshotId = 0L,
+    ): EvaluacionComercial {
+        return EvaluacionComercial(
+            evaluacionId = 0L,
             productoId = productoId,
             costoTotalUsd = costoTotalUsd,
             costoTotalPen = costoTotalPen,
@@ -163,7 +163,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             margenNetoPct = margenNetoPct,
             metricasTendencia = null,
             veredicto = null,
-            estadoSnapshot = resolverEstadoSnapshot(
+            estadoEvaluacion = resolverEstadoEvaluacion(
                 evidenciaSuficiente = margenNetoPct != null,
                 causaObsolescencia = causaObsolescencia
             ),
@@ -173,14 +173,14 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         )
     }
 
-    private fun resolverEstadoSnapshot(
+    private fun resolverEstadoEvaluacion(
         evidenciaSuficiente: Boolean,
         causaObsolescencia: ErrorOperacion?
-    ): EstadoSnapshot {
+    ): EstadoEvaluacion {
         return when {
-            !evidenciaSuficiente -> EstadoSnapshot.INCONCLUSO
-            causaObsolescencia != null -> EstadoSnapshot.OBSOLETO
-            else -> EstadoSnapshot.VIGENTE
+            !evidenciaSuficiente -> EstadoEvaluacion.INCONCLUSO
+            causaObsolescencia != null -> EstadoEvaluacion.OBSOLETO
+            else -> EstadoEvaluacion.VIGENTE
         }
     }
 

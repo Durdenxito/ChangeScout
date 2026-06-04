@@ -4,13 +4,13 @@ import com.app.changescout.domain.model.ComponentesCostoImportacion
 import com.app.changescout.domain.model.CondicionPublicacion
 import com.app.changescout.domain.model.CotizacionTipoCambio
 import com.app.changescout.domain.model.ErrorOperacion
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.Moneda
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoFiltroNlp
 import com.app.changescout.domain.model.ResultadoOperacion
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.repository.ProveedorFiltroNlp
 import com.app.changescout.domain.repository.ProveedorMarketplace
@@ -59,24 +59,24 @@ class EvaluarTendenciaProductoUseCaseTest {
     }
 
     @Test
-    fun invoke_conEvidenciaSuficiente_guardaSnapshotVigenteConVeredicto() = runBlocking {
+    fun invoke_conEvidenciaSuficiente_guardaevaluacionVigenteConVeredicto() = runBlocking {
         val resultado = crearUseCase().invoke(productoId = 7L)
 
         assertTrue(resultado is ResultadoOperacion.Exito)
-        val snapshot = (resultado as ResultadoOperacion.Exito).data
+        val evaluacion = (resultado as ResultadoOperacion.Exito).data
         assertEquals(1, repositorioEvaluacion.guardados.size)
-        assertEquals(snapshot, repositorioEvaluacion.guardados.single())
-        assertEquals(EstadoSnapshot.VIGENTE, snapshot.estadoSnapshot)
-        assertEquals(VeredictoComercial.SALUDABLE, snapshot.veredicto)
-        assertEquals(120.0, snapshot.costoTotalUsd ?: 0.0, 0.0001)
-        assertEquals(480.0, snapshot.costoTotalPen ?: 0.0, 0.0001)
-        assertEquals(20.0, snapshot.margenNetoPct ?: 0.0, 0.0001)
-        assertNotNull(snapshot.metricasTendencia)
-        assertEquals(ahora, snapshot.evaluadoEn)
+        assertEquals(evaluacion, repositorioEvaluacion.guardados.single())
+        assertEquals(EstadoEvaluacion.VIGENTE, evaluacion.estadoEvaluacion)
+        assertEquals(VeredictoComercial.SALUDABLE, evaluacion.veredicto)
+        assertEquals(120.0, evaluacion.costoTotalUsd ?: 0.0, 0.0001)
+        assertEquals(480.0, evaluacion.costoTotalPen ?: 0.0, 0.0001)
+        assertEquals(20.0, evaluacion.margenNetoPct ?: 0.0, 0.0001)
+        assertNotNull(evaluacion.metricasTendencia)
+        assertEquals(ahora, evaluacion.evaluadoEn)
     }
 
     @Test
-    fun invoke_conEvidenciaInsuficiente_guardaSnapshotInconclusoSinMargen() = runBlocking {
+    fun invoke_conEvidenciaInsuficiente_guardaevaluacionInconclusoSinMargen() = runBlocking {
         proveedorFiltroNlp.resultado = ResultadoOperacion.Exito(
             filtroBase(competidoresValidos = 2, puntajeConfianza = 0.9)
         )
@@ -84,16 +84,16 @@ class EvaluarTendenciaProductoUseCaseTest {
         val resultado = crearUseCase().invoke(productoId = 7L)
 
         assertTrue(resultado is ResultadoOperacion.Exito)
-        val snapshot = (resultado as ResultadoOperacion.Exito).data
-        assertEquals(EstadoSnapshot.INCONCLUSO, snapshot.estadoSnapshot)
-        assertEquals(VeredictoComercial.INCONCLUSO, snapshot.veredicto)
-        assertNull(snapshot.margenNetoPct)
-        assertNull(snapshot.metricasTendencia)
+        val evaluacion = (resultado as ResultadoOperacion.Exito).data
+        assertEquals(EstadoEvaluacion.INCONCLUSO, evaluacion.estadoEvaluacion)
+        assertEquals(VeredictoComercial.INCONCLUSO, evaluacion.veredicto)
+        assertNull(evaluacion.margenNetoPct)
+        assertNull(evaluacion.metricasTendencia)
         assertEquals(1, repositorioEvaluacion.guardados.size)
     }
 
     @Test
-    fun invoke_siMarketplaceFalla_retornaFalloYSinGuardarSnapshot() = runBlocking {
+    fun invoke_siMarketplaceFalla_retornaFalloYSinguardarEvaluacion() = runBlocking {
         val error = ErrorOperacion.Timeout(
             proveedor = "market-test",
             mensaje = "Tiempo de espera agotado."
@@ -108,7 +108,7 @@ class EvaluarTendenciaProductoUseCaseTest {
     }
 
     @Test
-    fun invoke_conDatosObsoletos_guardaSnapshotObsoletoYPropagaAdvertencia() = runBlocking {
+    fun invoke_conDatosObsoletos_guardaevaluacionObsoletoYPropagaAdvertencia() = runBlocking {
         val causa = ErrorOperacion.ProveedorNoDisponible(
             proveedor = "fx-test",
             mensaje = "Se uso la ultima cotizacion cacheada."
@@ -121,11 +121,11 @@ class EvaluarTendenciaProductoUseCaseTest {
         val resultado = crearUseCase().invoke(productoId = 7L)
 
         assertTrue(resultado is ResultadoOperacion.DatosObsoletos)
-        val snapshot = (resultado as ResultadoOperacion.DatosObsoletos).data
+        val evaluacion = (resultado as ResultadoOperacion.DatosObsoletos).data
         assertEquals(causa, resultado.causa)
-        assertEquals(EstadoSnapshot.OBSOLETO, snapshot.estadoSnapshot)
-        assertEquals(VeredictoComercial.SALUDABLE, snapshot.veredicto)
-        assertEquals(snapshot, repositorioEvaluacion.guardados.single())
+        assertEquals(EstadoEvaluacion.OBSOLETO, evaluacion.estadoEvaluacion)
+        assertEquals(VeredictoComercial.SALUDABLE, evaluacion.veredicto)
+        assertEquals(evaluacion, repositorioEvaluacion.guardados.single())
     }
 
     private fun crearUseCase(): EvaluarTendenciaProductoUseCase {
@@ -214,28 +214,28 @@ class EvaluarTendenciaProductoUseCaseTest {
     }
 
     private class FakeRepositorioEvaluacionComercial : RepositorioEvaluacionComercial {
-        val guardados = mutableListOf<SnapshotEvaluacionComercial>()
-        var historial = emptyList<SnapshotEvaluacionComercial>()
+        val guardados = mutableListOf<EvaluacionComercial>()
+        var historial = emptyList<EvaluacionComercial>()
 
-        override fun observarUltimo(productoId: Long): Flow<SnapshotEvaluacionComercial?> {
+        override fun observarUltimo(productoId: Long): Flow<EvaluacionComercial?> {
             return flowOf(guardados.lastOrNull { it.productoId == productoId })
         }
 
-        override fun observarUltimosDeTodos(): Flow<List<SnapshotEvaluacionComercial>> {
+        override fun observarUltimosDeTodos(): Flow<List<EvaluacionComercial>> {
             return flowOf(guardados)
         }
 
         override suspend fun obtenerHistorial(
             productoId: Long,
             limite: Int
-        ): List<SnapshotEvaluacionComercial> {
+        ): List<EvaluacionComercial> {
             return historial
                 .filter { it.productoId == productoId }
                 .take(limite)
         }
 
-        override suspend fun guardarSnapshot(snapshot: SnapshotEvaluacionComercial) {
-            guardados += snapshot
+        override suspend fun guardarEvaluacion(evaluacion: EvaluacionComercial) {
+            guardados += evaluacion
         }
     }
 

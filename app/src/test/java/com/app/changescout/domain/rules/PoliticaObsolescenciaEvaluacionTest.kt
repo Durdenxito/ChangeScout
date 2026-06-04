@@ -1,7 +1,7 @@
 package com.app.changescout.domain.rules
 
-import com.app.changescout.domain.model.EstadoSnapshot
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EstadoEvaluacion
+import com.app.changescout.domain.model.EvaluacionComercial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -9,8 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
-class PoliticaObsolescenciaSnapshotTest {
-    private val politica = PoliticaObsolescenciaSnapshot()
+class PoliticaObsolescenciaEvaluacionTest {
+    private val politica = PoliticaObsolescenciaEvaluacion()
     private val base = Instant.parse("2026-06-04T12:00:00Z")
 
     @Test
@@ -44,32 +44,32 @@ class PoliticaObsolescenciaSnapshotTest {
     }
 
     @Test
-    fun resolverEstado_preservaSnapshotFallido() {
-        val snapshot = snapshot(EstadoSnapshot.FALLIDO)
+    fun resolverEstado_preservaevaluacionFallido() {
+        val evaluacion = evaluacion(EstadoEvaluacion.FALLIDO)
 
         val estado = politica.resolverEstado(
-            snapshot = snapshot,
+            evaluacion = evaluacion,
             now = base.plusSeconds(20 * 60 * 60)
         )
 
-        assertEquals(EstadoSnapshot.FALLIDO, estado)
+        assertEquals(EstadoEvaluacion.FALLIDO, estado)
     }
 
     @Test
     fun resolverEstado_marcaObsoletoSiSuperaVentana() {
-        val snapshot = snapshot(EstadoSnapshot.VIGENTE)
+        val evaluacion = evaluacion(EstadoEvaluacion.VIGENTE)
 
         val estado = politica.resolverEstado(
-            snapshot = snapshot,
+            evaluacion = evaluacion,
             now = base.plusSeconds(13 * 60 * 60)
         )
 
-        assertEquals(EstadoSnapshot.OBSOLETO, estado)
+        assertEquals(EstadoEvaluacion.OBSOLETO, estado)
     }
 
-    private fun snapshot(estado: EstadoSnapshot): SnapshotEvaluacionComercial {
-        return SnapshotEvaluacionComercial(
-            snapshotId = 1L,
+    private fun evaluacion(estado: EstadoEvaluacion): EvaluacionComercial {
+        return EvaluacionComercial(
+            evaluacionId = 1L,
             productoId = 1L,
             costoTotalUsd = null,
             costoTotalPen = null,
@@ -79,7 +79,7 @@ class PoliticaObsolescenciaSnapshotTest {
             margenNetoPct = null,
             metricasTendencia = null,
             veredicto = null,
-            estadoSnapshot = estado,
+            estadoEvaluacion = estado,
             evaluadoEn = base,
             versionAlgoritmo = "test",
             trazaProveedor = null

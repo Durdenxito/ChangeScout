@@ -1,11 +1,11 @@
 package com.app.changescout.data.repository
 
 import com.app.changescout.data.local.dao.ProductoImportadoDao
-import com.app.changescout.data.local.dao.SnapshotEvaluacionComercialDao
+import com.app.changescout.data.local.dao.EvaluacionComercialDao
 import com.app.changescout.data.local.entity.ProductoImportadoEntity
-import com.app.changescout.data.local.entity.SnapshotEvaluacionComercialEntity
+import com.app.changescout.data.local.entity.EvaluacionComercialEntity
 import com.app.changescout.domain.model.ProductoImportado
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.repository.RepositorioEvaluacionComercial
 import com.app.changescout.domain.repository.RepositorioProductoImportado
 import kotlinx.coroutines.flow.Flow
@@ -34,27 +34,27 @@ class RepositorioProductoImportadoRoom(
 }
 
 class RepositorioEvaluacionComercialRoom(
-    private val snapshotDao: SnapshotEvaluacionComercialDao
+    private val evaluacionDao: EvaluacionComercialDao
 ) : RepositorioEvaluacionComercial {
-    override fun observarUltimo(productoId: Long): Flow<SnapshotEvaluacionComercial?> {
-        return snapshotDao.observarUltimo(productoId)
-            .map { snapshot -> snapshot?.toDomain() }
+    override fun observarUltimo(productoId: Long): Flow<EvaluacionComercial?> {
+        return evaluacionDao.observarUltimo(productoId)
+            .map { evaluacion -> evaluacion?.toDomain() }
     }
 
-    override fun observarUltimosDeTodos(): Flow<List<SnapshotEvaluacionComercial>> {
-        return snapshotDao.observarUltimosDeTodos()
-            .map { snapshots -> snapshots.map { it.toDomain() } }
+    override fun observarUltimosDeTodos(): Flow<List<EvaluacionComercial>> {
+        return evaluacionDao.observarUltimosDeTodos()
+            .map { evaluaciones -> evaluaciones.map { it.toDomain() } }
     }
 
     override suspend fun obtenerHistorial(
         productoId: Long,
         limite: Int
-    ): List<SnapshotEvaluacionComercial> {
-        return snapshotDao.obtenerHistorial(productoId, limite)
+    ): List<EvaluacionComercial> {
+        return evaluacionDao.obtenerHistorial(productoId, limite)
             .map { it.toDomain() }
     }
 
-    override suspend fun guardarSnapshot(snapshot: SnapshotEvaluacionComercial) {
-        snapshotDao.insertar(SnapshotEvaluacionComercialEntity.fromDomain(snapshot))
+    override suspend fun guardarEvaluacion(evaluacion: EvaluacionComercial) {
+        evaluacionDao.insertar(EvaluacionComercialEntity.fromDomain(evaluacion))
     }
 }

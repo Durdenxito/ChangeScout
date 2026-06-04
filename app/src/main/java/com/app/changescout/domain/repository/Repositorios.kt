@@ -5,7 +5,7 @@ import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoFiltroNlp
 import com.app.changescout.domain.model.ResultadoOperacion
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import kotlinx.coroutines.flow.Flow
 
 interface RepositorioProductoImportado {
@@ -16,10 +16,10 @@ interface RepositorioProductoImportado {
 }
 
 interface RepositorioEvaluacionComercial {
-    fun observarUltimo(productoId: Long): Flow<SnapshotEvaluacionComercial?>
-    fun observarUltimosDeTodos(): Flow<List<SnapshotEvaluacionComercial>>
-    suspend fun obtenerHistorial(productoId: Long, limite: Int): List<SnapshotEvaluacionComercial>
-    suspend fun guardarSnapshot(snapshot: SnapshotEvaluacionComercial)
+    fun observarUltimo(productoId: Long): Flow<EvaluacionComercial?>
+    fun observarUltimosDeTodos(): Flow<List<EvaluacionComercial>>
+    suspend fun obtenerHistorial(productoId: Long, limite: Int): List<EvaluacionComercial>
+    suspend fun guardarEvaluacion(evaluacion: EvaluacionComercial)
 }
 
 interface ProveedorTipoCambio {

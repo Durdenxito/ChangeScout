@@ -5,11 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.ResultadoOperacion
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.usecase.EvaluarTendenciaProductoUseCase
 import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
-import com.app.changescout.domain.usecase.ObservarUltimoSnapshotUseCase
+import com.app.changescout.domain.usecase.ObservarUltimaEvaluacionUseCase
 import com.app.changescout.ui.navigation.DestinoApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 data class EstadoUiDetalleProducto(
     val producto: ProductoImportado? = null,
-    val snapshot: SnapshotEvaluacionComercial? = null,
+    val evaluacion: EvaluacionComercial? = null,
     val estaCargando: Boolean = true,
     val estaEvaluando: Boolean = false,
     val mensajeError: String? = null
@@ -44,7 +44,7 @@ sealed interface EfectoDetalleProducto {
 @HiltViewModel
 class ViewModelDetalleProducto @Inject constructor(
     private val observarDetalleProductoUseCase: ObservarDetalleProductoUseCase,
-    private val observarUltimoSnapshotUseCase: ObservarUltimoSnapshotUseCase,
+    private val observarUltimaEvaluacionUseCase: ObservarUltimaEvaluacionUseCase,
     private val evaluarTendenciaProductoUseCase: EvaluarTendenciaProductoUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -60,14 +60,14 @@ class ViewModelDetalleProducto @Inject constructor(
         viewModelScope.launch {
             combine(
                 observarDetalleProductoUseCase(productoId),
-                observarUltimoSnapshotUseCase(productoId)
-            ) { producto, snapshot ->
-                producto to snapshot
-            }.collect { (producto, snapshot) ->
+                observarUltimaEvaluacionUseCase(productoId)
+            ) { producto, evaluacion ->
+                producto to evaluacion
+            }.collect { (producto, evaluacion) ->
                 _uiState.update { estado ->
                     estado.copy(
                         producto = producto,
-                        snapshot = snapshot,
+                        evaluacion = evaluacion,
                         estaCargando = false,
                         mensajeError = if (producto == null) {
                             "No encontramos este producto en el radar actual."

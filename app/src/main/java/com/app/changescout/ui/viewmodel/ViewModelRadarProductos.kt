@@ -2,7 +2,7 @@ package com.app.changescout.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.usecase.ObservarRadarProductosUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,7 +28,7 @@ data class TarjetaProductoRadarUiModel(
     val cantidadDisponible: Int,
     val margenNetoPct: Double?,
     val veredicto: VeredictoComercial?,
-    val estadoSnapshot: EstadoSnapshot?,
+    val estadoEvaluacion: EstadoEvaluacion?,
     val evaluadoEn: String?
 )
 
@@ -64,10 +64,10 @@ class ViewModelRadarProductos @Inject constructor(
                                 productoId = item.producto.id,
                                 nombre = item.producto.nombre,
                                 cantidadDisponible = item.producto.cantidadDisponible,
-                                margenNetoPct = item.ultimoSnapshot?.margenNetoPct,
-                                veredicto = item.ultimoSnapshot?.veredicto,
-                                estadoSnapshot = item.ultimoSnapshot?.estadoSnapshot,
-                                evaluadoEn = item.ultimoSnapshot?.evaluadoEn?.toString()
+                                margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
+                                veredicto = item.ultimaEvaluacion?.veredicto,
+                                estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
+                                evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.toString()
                             )
                         },
                         estaCargando = false,

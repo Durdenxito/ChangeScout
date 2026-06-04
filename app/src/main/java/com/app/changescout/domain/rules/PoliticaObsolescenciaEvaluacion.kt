@@ -1,12 +1,12 @@
 package com.app.changescout.domain.rules
 
-import com.app.changescout.domain.model.EstadoSnapshot
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EstadoEvaluacion
+import com.app.changescout.domain.model.EvaluacionComercial
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
-class PoliticaObsolescenciaSnapshot @Inject constructor(
+class PoliticaObsolescenciaEvaluacion @Inject constructor(
     private val ventanaVigencia: Duration = Duration.ofHours(12)
 ) {
     fun estaVigente(
@@ -21,20 +21,20 @@ class PoliticaObsolescenciaSnapshot @Inject constructor(
     }
 
     fun resolverEstado(
-        snapshot: SnapshotEvaluacionComercial,
+        evaluacion: EvaluacionComercial,
         now: Instant
-    ): EstadoSnapshot {
+    ): EstadoEvaluacion {
         if (
-            snapshot.estadoSnapshot == EstadoSnapshot.FALLIDO ||
-            snapshot.estadoSnapshot == EstadoSnapshot.INCONCLUSO
+            evaluacion.estadoEvaluacion == EstadoEvaluacion.FALLIDO ||
+            evaluacion.estadoEvaluacion == EstadoEvaluacion.INCONCLUSO
         ) {
-            return snapshot.estadoSnapshot
+            return evaluacion.estadoEvaluacion
         }
 
-        return if (estaVigente(snapshot.evaluadoEn, now)) {
-            EstadoSnapshot.VIGENTE
+        return if (estaVigente(evaluacion.evaluadoEn, now)) {
+            EstadoEvaluacion.VIGENTE
         } else {
-            EstadoSnapshot.OBSOLETO
+            EstadoEvaluacion.OBSOLETO
         }
     }
 }

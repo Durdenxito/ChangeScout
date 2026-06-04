@@ -2,7 +2,7 @@ package com.app.changescout.domain.usecase
 
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.ProductoRadarItem
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.repository.RepositorioEvaluacionComercial
 import com.app.changescout.domain.repository.RepositorioProductoImportado
 import kotlinx.coroutines.flow.Flow
@@ -17,12 +17,12 @@ class ObservarRadarProductosUseCase @Inject constructor(
         return combine(
             repositorioProducto.observarTodos(),
             repositorioEvaluacion.observarUltimosDeTodos()
-        ) { productos, snapshots ->
-            val snapshotsPorProducto = snapshots.associateBy { it.productoId }
+        ) { productos, evaluaciones ->
+            val evaluacionesPorProducto = evaluaciones.associateBy { it.productoId }
             productos.map { producto ->
                 ProductoRadarItem(
                     producto = producto,
-                    ultimoSnapshot = snapshotsPorProducto[producto.id]
+                    ultimaEvaluacion = evaluacionesPorProducto[producto.id]
                 )
             }
         }
@@ -37,10 +37,10 @@ class ObservarDetalleProductoUseCase @Inject constructor(
     }
 }
 
-class ObservarUltimoSnapshotUseCase @Inject constructor(
+class ObservarUltimaEvaluacionUseCase @Inject constructor(
     private val repositorioEvaluacion: RepositorioEvaluacionComercial
 ) {
-    operator fun invoke(productoId: Long): Flow<SnapshotEvaluacionComercial?> {
+    operator fun invoke(productoId: Long): Flow<EvaluacionComercial?> {
         return repositorioEvaluacion.observarUltimo(productoId)
     }
 }

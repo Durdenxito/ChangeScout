@@ -10,7 +10,7 @@ import com.app.changescout.data.api.marketplace.demo.ProveedorMarketplaceDemo
 import com.app.changescout.data.api.nlp.demo.ProveedorFiltroNlpDemo
 import com.app.changescout.data.local.ChangeScoutDatabase
 import com.app.changescout.data.local.dao.ProductoImportadoDao
-import com.app.changescout.data.local.dao.SnapshotEvaluacionComercialDao
+import com.app.changescout.data.local.dao.EvaluacionComercialDao
 import com.app.changescout.data.repository.RepositorioEvaluacionComercialRoom
 import com.app.changescout.data.repository.RepositorioProductoImportadoRoom
 import com.app.changescout.domain.repository.ProveedorFiltroNlp
@@ -112,9 +112,9 @@ object ModulosChangeScout {
     ): ProductoImportadoDao = database.productoImportadoDao()
 
     @Provides
-    fun provideSnapshotEvaluacionComercialDao(
+    fun provideEvaluacionComercialDao(
         database: ChangeScoutDatabase
-    ): SnapshotEvaluacionComercialDao = database.snapshotEvaluacionComercialDao()
+    ): EvaluacionComercialDao = database.evaluacionComercialDao()
 
     @Provides
     @Singleton
@@ -127,8 +127,8 @@ object ModulosChangeScout {
     @Provides
     @Singleton
     fun provideRepositorioEvaluacionComercial(
-        snapshotDao: SnapshotEvaluacionComercialDao
+        evaluacionDao: EvaluacionComercialDao
     ): RepositorioEvaluacionComercial {
-        return RepositorioEvaluacionComercialRoom(snapshotDao)
+        return RepositorioEvaluacionComercialRoom(evaluacionDao)
     }
 }

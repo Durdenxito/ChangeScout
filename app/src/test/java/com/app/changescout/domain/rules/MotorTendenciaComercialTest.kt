@@ -1,8 +1,8 @@
 package com.app.changescout.domain.rules
 
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.MetricasTendencia
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,7 +16,7 @@ class MotorTendenciaComercialTest {
     @Test
     fun calcular_sinHistorial_retornaMetricasNulasYVentanaCero() {
         val metricas = motor.calcular(
-            actual = snapshotActual(),
+            actual = evaluacionActual(),
             historial = emptyList()
         )
 
@@ -29,10 +29,10 @@ class MotorTendenciaComercialTest {
     @Test
     fun calcular_calculaErosionContraPrecioPromedioHistorico() {
         val metricas = motor.calcular(
-            actual = snapshotActual(precioPromedioRealPen = 88.0),
+            actual = evaluacionActual(precioPromedioRealPen = 88.0),
             historial = listOf(
-                snapshotHistorico(precioPromedioRealPen = 100.0),
-                snapshotHistorico(precioPromedioRealPen = 120.0)
+                evaluacionHistorico(precioPromedioRealPen = 100.0),
+                evaluacionHistorico(precioPromedioRealPen = 120.0)
             )
         )
 
@@ -42,10 +42,10 @@ class MotorTendenciaComercialTest {
     @Test
     fun calcular_calculaCrecimientoDeCompetidoresContraPromedioHistorico() {
         val metricas = motor.calcular(
-            actual = snapshotActual(competidoresValidos = 30),
+            actual = evaluacionActual(competidoresValidos = 30),
             historial = listOf(
-                snapshotHistorico(competidoresValidos = 10),
-                snapshotHistorico(competidoresValidos = 20)
+                evaluacionHistorico(competidoresValidos = 10),
+                evaluacionHistorico(competidoresValidos = 20)
             )
         )
 
@@ -55,10 +55,10 @@ class MotorTendenciaComercialTest {
     @Test
     fun calcular_calculaPresionCambiariaContraPromedioHistorico() {
         val metricas = motor.calcular(
-            actual = snapshotActual(tipoCambioVentaUsdPen = 3.96),
+            actual = evaluacionActual(tipoCambioVentaUsdPen = 3.96),
             historial = listOf(
-                snapshotHistorico(tipoCambioVentaUsdPen = 3.5),
-                snapshotHistorico(tipoCambioVentaUsdPen = 3.7)
+                evaluacionHistorico(tipoCambioVentaUsdPen = 3.5),
+                evaluacionHistorico(tipoCambioVentaUsdPen = 3.7)
             )
         )
 
@@ -66,20 +66,20 @@ class MotorTendenciaComercialTest {
     }
 
     @Test
-    fun calcular_ignoraSnapshotsNoComparables() {
+    fun calcular_ignoraevaluacionesNoComparables() {
         val metricas = motor.calcular(
-            actual = snapshotActual(precioPromedioRealPen = 90.0),
+            actual = evaluacionActual(precioPromedioRealPen = 90.0),
             historial = listOf(
-                snapshotHistorico(productoId = 99L, precioPromedioRealPen = 10.0),
-                snapshotHistorico(
+                evaluacionHistorico(productoId = 99L, precioPromedioRealPen = 10.0),
+                evaluacionHistorico(
                     precioPromedioRealPen = 20.0,
-                    estadoSnapshot = EstadoSnapshot.FALLIDO
+                    estadoEvaluacion = EstadoEvaluacion.FALLIDO
                 ),
-                snapshotHistorico(
+                evaluacionHistorico(
                     precioPromedioRealPen = 30.0,
                     evaluadoEn = actualFecha.plusSeconds(60)
                 ),
-                snapshotHistorico(precioPromedioRealPen = 100.0)
+                evaluacionHistorico(precioPromedioRealPen = 100.0)
             )
         )
 
@@ -89,23 +89,23 @@ class MotorTendenciaComercialTest {
     @Test
     fun calcular_calculaVentanaHistoricaEnDias() {
         val metricas = motor.calcular(
-            actual = snapshotActual(),
+            actual = evaluacionActual(),
             historial = listOf(
-                snapshotHistorico(evaluadoEn = actualFecha.minusSeconds(2 * 24 * 60 * 60)),
-                snapshotHistorico(evaluadoEn = actualFecha.minusSeconds(7 * 24 * 60 * 60))
+                evaluacionHistorico(evaluadoEn = actualFecha.minusSeconds(2 * 24 * 60 * 60)),
+                evaluacionHistorico(evaluadoEn = actualFecha.minusSeconds(7 * 24 * 60 * 60))
             )
         )
 
         assertEquals(7, metricas.ventanaHistoricaDias)
     }
 
-    private fun snapshotActual(
+    private fun evaluacionActual(
         productoId: Long = 1L,
         precioPromedioRealPen: Double? = 100.0,
         competidoresValidos: Int = 10,
         tipoCambioVentaUsdPen: Double? = 3.8
-    ): SnapshotEvaluacionComercial {
-        return snapshot(
+    ): EvaluacionComercial {
+        return evaluacion(
             productoId = productoId,
             precioPromedioRealPen = precioPromedioRealPen,
             competidoresValidos = competidoresValidos,
@@ -114,34 +114,34 @@ class MotorTendenciaComercialTest {
         )
     }
 
-    private fun snapshotHistorico(
+    private fun evaluacionHistorico(
         productoId: Long = 1L,
         precioPromedioRealPen: Double? = 100.0,
         competidoresValidos: Int = 10,
         tipoCambioVentaUsdPen: Double? = 3.8,
-        estadoSnapshot: EstadoSnapshot = EstadoSnapshot.OBSOLETO,
+        estadoEvaluacion: EstadoEvaluacion = EstadoEvaluacion.OBSOLETO,
         evaluadoEn: Instant = actualFecha.minusSeconds(24 * 60 * 60)
-    ): SnapshotEvaluacionComercial {
-        return snapshot(
+    ): EvaluacionComercial {
+        return evaluacion(
             productoId = productoId,
             precioPromedioRealPen = precioPromedioRealPen,
             competidoresValidos = competidoresValidos,
             tipoCambioVentaUsdPen = tipoCambioVentaUsdPen,
-            estadoSnapshot = estadoSnapshot,
+            estadoEvaluacion = estadoEvaluacion,
             evaluadoEn = evaluadoEn
         )
     }
 
-    private fun snapshot(
+    private fun evaluacion(
         productoId: Long,
         precioPromedioRealPen: Double?,
         competidoresValidos: Int,
         tipoCambioVentaUsdPen: Double?,
-        estadoSnapshot: EstadoSnapshot = EstadoSnapshot.VIGENTE,
+        estadoEvaluacion: EstadoEvaluacion = EstadoEvaluacion.VIGENTE,
         evaluadoEn: Instant
-    ): SnapshotEvaluacionComercial {
-        return SnapshotEvaluacionComercial(
-            snapshotId = 1L,
+    ): EvaluacionComercial {
+        return EvaluacionComercial(
+            evaluacionId = 1L,
             productoId = productoId,
             costoTotalUsd = 100.0,
             costoTotalPen = 380.0,
@@ -156,7 +156,7 @@ class MotorTendenciaComercialTest {
                 ventanaHistoricaDias = 0
             ),
             veredicto = VeredictoComercial.SALUDABLE,
-            estadoSnapshot = estadoSnapshot,
+            estadoEvaluacion = estadoEvaluacion,
             evaluadoEn = evaluadoEn,
             versionAlgoritmo = "test",
             trazaProveedor = null

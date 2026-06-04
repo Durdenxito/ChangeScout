@@ -3,10 +3,11 @@ package com.app.changescout.data.local.entity
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
+import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.MetricasTendencia
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
 import java.time.Instant
 
@@ -25,9 +26,10 @@ import java.time.Instant
         Index(value = ["productoId", "evaluadoEnEpochMillis"])
     ]
 )
-data class SnapshotEvaluacionComercialEntity(
+data class EvaluacionComercialEntity(
     @PrimaryKey(autoGenerate = true)
-    val snapshotId: Long = 0L,
+    @ColumnInfo(name = "snapshotId")
+    val evaluacionId: Long = 0L,
     val productoId: Long,
     val costoTotalUsd: Double?,
     val costoTotalPen: Double?,
@@ -40,14 +42,15 @@ data class SnapshotEvaluacionComercialEntity(
     val presionCambiariaPct: Double?,
     val ventanaHistoricaDias: Int?,
     val veredicto: String?,
-    val estadoSnapshot: String,
+    @ColumnInfo(name = "estadoSnapshot")
+    val estadoEvaluacion: String,
     val evaluadoEnEpochMillis: Long,
     val versionAlgoritmo: String,
     val trazaProveedor: String?
 ) {
-    fun toDomain(): SnapshotEvaluacionComercial {
-        return SnapshotEvaluacionComercial(
-            snapshotId = snapshotId,
+    fun toDomain(): EvaluacionComercial {
+        return EvaluacionComercial(
+            evaluacionId = evaluacionId,
             productoId = productoId,
             costoTotalUsd = costoTotalUsd,
             costoTotalPen = costoTotalPen,
@@ -57,7 +60,8 @@ data class SnapshotEvaluacionComercialEntity(
             margenNetoPct = margenNetoPct,
             metricasTendencia = toMetricasTendencia(),
             veredicto = veredicto?.toEnumOrNull<VeredictoComercial>(),
-            estadoSnapshot = estadoSnapshot.toEnumOrNull<EstadoSnapshot>() ?: EstadoSnapshot.FALLIDO,
+            estadoEvaluacion = estadoEvaluacion.toEnumOrNull<EstadoEvaluacion>()
+                ?: EstadoEvaluacion.FALLIDO,
             evaluadoEn = Instant.ofEpochMilli(evaluadoEnEpochMillis),
             versionAlgoritmo = versionAlgoritmo,
             trazaProveedor = trazaProveedor
@@ -83,25 +87,25 @@ data class SnapshotEvaluacionComercialEntity(
     }
 
     companion object {
-        fun fromDomain(snapshot: SnapshotEvaluacionComercial): SnapshotEvaluacionComercialEntity {
-            return SnapshotEvaluacionComercialEntity(
-                snapshotId = snapshot.snapshotId,
-                productoId = snapshot.productoId,
-                costoTotalUsd = snapshot.costoTotalUsd,
-                costoTotalPen = snapshot.costoTotalPen,
-                tipoCambioVentaUsdPen = snapshot.tipoCambioVentaUsdPen,
-                precioPromedioRealPen = snapshot.precioPromedioRealPen,
-                competidoresValidos = snapshot.competidoresValidos,
-                margenNetoPct = snapshot.margenNetoPct,
-                erosionPrecioLocalPct = snapshot.metricasTendencia?.erosionPrecioLocalPct,
-                variacionCompetidoresPct = snapshot.metricasTendencia?.variacionCompetidoresPct,
-                presionCambiariaPct = snapshot.metricasTendencia?.presionCambiariaPct,
-                ventanaHistoricaDias = snapshot.metricasTendencia?.ventanaHistoricaDias,
-                veredicto = snapshot.veredicto?.name,
-                estadoSnapshot = snapshot.estadoSnapshot.name,
-                evaluadoEnEpochMillis = snapshot.evaluadoEn.toEpochMilli(),
-                versionAlgoritmo = snapshot.versionAlgoritmo,
-                trazaProveedor = snapshot.trazaProveedor
+        fun fromDomain(evaluacion: EvaluacionComercial): EvaluacionComercialEntity {
+            return EvaluacionComercialEntity(
+                evaluacionId = evaluacion.evaluacionId,
+                productoId = evaluacion.productoId,
+                costoTotalUsd = evaluacion.costoTotalUsd,
+                costoTotalPen = evaluacion.costoTotalPen,
+                tipoCambioVentaUsdPen = evaluacion.tipoCambioVentaUsdPen,
+                precioPromedioRealPen = evaluacion.precioPromedioRealPen,
+                competidoresValidos = evaluacion.competidoresValidos,
+                margenNetoPct = evaluacion.margenNetoPct,
+                erosionPrecioLocalPct = evaluacion.metricasTendencia?.erosionPrecioLocalPct,
+                variacionCompetidoresPct = evaluacion.metricasTendencia?.variacionCompetidoresPct,
+                presionCambiariaPct = evaluacion.metricasTendencia?.presionCambiariaPct,
+                ventanaHistoricaDias = evaluacion.metricasTendencia?.ventanaHistoricaDias,
+                veredicto = evaluacion.veredicto?.name,
+                estadoEvaluacion = evaluacion.estadoEvaluacion.name,
+                evaluadoEnEpochMillis = evaluacion.evaluadoEn.toEpochMilli(),
+                versionAlgoritmo = evaluacion.versionAlgoritmo,
+                trazaProveedor = evaluacion.trazaProveedor
             )
         }
     }

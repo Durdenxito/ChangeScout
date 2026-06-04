@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
@@ -309,7 +309,7 @@ private fun TarjetaProductoRadar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ChipOperativo(
-                texto = producto.estadoSnapshot?.aTextoPresentable() ?: "Pendiente",
+                texto = producto.estadoEvaluacion?.aTextoPresentable() ?: "Pendiente",
                 icono = Icons.Outlined.Schedule,
                 contenedor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -324,12 +324,12 @@ private fun TarjetaProductoRadar(
     }
 }
 
-private fun EstadoSnapshot.aTextoPresentable(): String {
+private fun EstadoEvaluacion.aTextoPresentable(): String {
     return when (this) {
-        EstadoSnapshot.VIGENTE -> "Vigente"
-        EstadoSnapshot.OBSOLETO -> "Obsoleto"
-        EstadoSnapshot.INCONCLUSO -> "Inconcluso"
-        EstadoSnapshot.FALLIDO -> "Pendiente"
+        EstadoEvaluacion.VIGENTE -> "Vigente"
+        EstadoEvaluacion.OBSOLETO -> "Obsoleto"
+        EstadoEvaluacion.INCONCLUSO -> "Inconcluso"
+        EstadoEvaluacion.FALLIDO -> "Pendiente"
     }
 }
 

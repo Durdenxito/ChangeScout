@@ -1,0 +1,345 @@
+@startuml
+title ChangeScout - Diagrama de clases relevante actual
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+
+hide empty members
+
+package "ui.viewmodel" {
+  class ViewModelRadarProductos {
+    - observarRadarProductosUseCase: ObservarRadarProductosUseCase
+    + onEvent(event)
+  }
+
+  class ViewModelFormularioProducto {
+    - guardarProductoImportadoUseCase: GuardarProductoImportadoUseCase
+    - savedStateHandle: SavedStateHandle
+    + onEvent(event)
+  }
+
+  class ViewModelDetalleProducto {
+    - observarDetalleProductoUseCase: ObservarDetalleProductoUseCase
+    - observarUltimaEvaluacionUseCase: ObservarUltimaEvaluacionUseCase
+    - evaluarTendenciaProductoUseCase: EvaluarTendenciaProductoUseCase
+    - productoId: Long
+    + onEvent(event)
+  }
+}
+
+package "domain.model" {
+  class ProductoRadarItem {
+    + producto: ProductoImportado
+    + ultimaEvaluacion: EvaluacionComercial?
+    + tieneEvaluacion(): Boolean
+  }
+
+  class ProductoImportado {
+    + id: Long
+    + nombre: String
+    + queryCompetencia: String
+    + componentesCosto: ComponentesCostoImportacion
+    + cantidadDisponible: Int
+    + notas: String?
+    + estaListoParaEvaluacion(): Boolean
+  }
+
+  class ComponentesCostoImportacion {
+    + precioFobUsd: Double
+    + fleteUsd: Double
+    + seguroUsd: Double
+    + arancelesUsd: Double
+    + otrosCargosUsd: Double
+    + tieneValoresValidos(): Boolean
+  }
+
+  class EvaluacionComercial {
+    + evaluacionId: Long
+    + productoId: Long
+    + costoTotalUsd: Double?
+    + costoTotalPen: Double?
+    + tipoCambioVentaUsdPen: Double?
+    + precioPromedioRealPen: Double?
+    + competidoresValidos: Int
+    + margenNetoPct: Double?
+    + metricasTendencia: MetricasTendencia?
+    + veredicto: String?
+    + estadoEvaluacion: String
+    + evaluadoEn: Instant
+    + versionAlgoritmo: String
+    + trazaProveedor: String?
+    + esConclusivo(): Boolean
+  }
+
+  class MetricasTendencia {
+    + erosionPrecioLocalPct: Double?
+    + variacionCompetidoresPct: Double?
+    + presionCambiariaPct: Double?
+    + ventanaHistoricaDias: Int
+  }
+
+  class CotizacionTipoCambio {
+    + tasaVentaUsdPen: Double
+    + nombreFuente: String
+    + obtenidoEn: Instant
+  }
+
+  class PublicacionMercado {
+    + publicacionId: String
+    + titulo: String
+    + precio: Double
+    + moneda: String
+    + condicion: String
+    + permalink: String?
+    + nombreFuente: String
+  }
+
+  class PublicacionComparable {
+    + publicacionOrigenId: String
+    + tituloNormalizado: String
+    + precioPen: Double
+  }
+
+  class ResultadoFiltroNlp {
+    + publicacionesValidas: List<PublicacionComparable>
+    + cantidadDescartadas: Int
+    + razonesDescarte: List<String>
+    + precioPromedioRealPen: Double?
+    + competidoresValidos: Int
+    + puntajeConfianza: Double?
+    + trazaProveedor: String
+  }
+}
+
+package "domain.repository" {
+  interface RepositorioProductoImportado {
+    + observarTodos(): Flow<List<ProductoImportado>>
+    + observarPorId(productoId: Long): Flow<ProductoImportado?>
+    + obtenerPorId(productoId: Long): ProductoImportado?
+    + upsert(producto: ProductoImportado): Long
+  }
+
+  interface RepositorioEvaluacionComercial {
+    + observarUltimo(productoId: Long): Flow<EvaluacionComercial?>
+    + observarUltimosDeTodos(): Flow<List<EvaluacionComercial>>
+    + obtenerHistorial(productoId: Long, limite: Int): List<EvaluacionComercial>
+    + guardarEvaluacion(evaluacion: EvaluacionComercial)
+  }
+
+  interface ProveedorTipoCambio {
+    + nombreProveedor: String
+    + obtenerTasaVentaUsdPen(): CotizacionTipoCambio
+  }
+
+  interface ProveedorMarketplace {
+    + nombreProveedor: String
+    + buscar(query: String, limit: Int): List<PublicacionMercado>
+  }
+
+  interface ProveedorFiltroNlp {
+    + nombreProveedor: String
+    + filtrar(publicaciones: List<PublicacionMercado>, producto: ProductoImportado): ResultadoFiltroNlp
+  }
+}
+
+package "domain.usecase" {
+  class ObservarRadarProductosUseCase {
+    - repositorioProducto: RepositorioProductoImportado
+    - repositorioEvaluacion: RepositorioEvaluacionComercial
+    + invoke(): Flow<List<ProductoRadarItem>>
+  }
+
+  class ObservarDetalleProductoUseCase {
+    - repositorioProducto: RepositorioProductoImportado
+    + invoke(productoId: Long): Flow<ProductoImportado?>
+  }
+
+  class ObservarUltimaEvaluacionUseCase {
+    - repositorioEvaluacion: RepositorioEvaluacionComercial
+    + invoke(productoId: Long): Flow<EvaluacionComercial?>
+  }
+
+  class GuardarProductoImportadoUseCase {
+    - repositorioProducto: RepositorioProductoImportado
+    + invoke(producto: ProductoImportado): Long
+  }
+
+  class EvaluarTendenciaProductoUseCase {
+    - repositorioProducto: RepositorioProductoImportado
+    - repositorioEvaluacion: RepositorioEvaluacionComercial
+    - proveedorTipoCambio: ProveedorTipoCambio
+    - proveedorMarketplace: ProveedorMarketplace
+    - proveedorFiltroNlp: ProveedorFiltroNlp
+    - clock: Clock
+    + invoke(productoId: Long): EvaluacionComercial
+  }
+}
+
+package "data.local" {
+  class ChangeScoutDatabase {
+    + productoImportadoDao(): ProductoImportadoDao
+    + evaluacionComercialDao(): EvaluacionComercialDao
+  }
+
+  interface ProductoImportadoDao {
+    + observarTodos(): Flow<List<ProductoImportadoEntity>>
+    + observarPorId(productoId: Long): Flow<ProductoImportadoEntity?>
+    + obtenerPorId(productoId: Long): ProductoImportadoEntity?
+    + upsert(producto: ProductoImportadoEntity): Long
+  }
+
+  interface EvaluacionComercialDao {
+    + observarUltimo(productoId: Long): Flow<EvaluacionComercialEntity?>
+    + observarUltimosDeTodos(): Flow<List<EvaluacionComercialEntity>>
+    + obtenerHistorial(productoId: Long, limite: Int): List<EvaluacionComercialEntity>
+    + insertar(evaluacion: EvaluacionComercialEntity)
+  }
+
+  class ProductoImportadoEntity {
+    + id: Long
+    + nombre: String
+    + queryCompetencia: String
+    + precioFobUsd: Double
+    + fleteUsd: Double
+    + seguroUsd: Double
+    + arancelesUsd: Double
+    + otrosCargosUsd: Double
+    + cantidadDisponible: Int
+    + notas: String?
+    + toDomain(): ProductoImportado
+  }
+
+  class EvaluacionComercialEntity {
+    + evaluacionId: Long
+    + productoId: Long
+    + costoTotalUsd: Double?
+    + costoTotalPen: Double?
+    + tipoCambioVentaUsdPen: Double?
+    + precioPromedioRealPen: Double?
+    + competidoresValidos: Int
+    + margenNetoPct: Double?
+    + erosionPrecioLocalPct: Double?
+    + variacionCompetidoresPct: Double?
+    + presionCambiariaPct: Double?
+    + ventanaHistoricaDias: Int?
+    + veredicto: String?
+    + estadoEvaluacion: String
+    + evaluadoEnEpochMillis: Long
+    + versionAlgoritmo: String
+    + trazaProveedor: String?
+    + toDomain(): EvaluacionComercial
+  }
+}
+
+package "data.repository" {
+  class RepositorioProductoImportadoRoom {
+    - productoDao: ProductoImportadoDao
+    + observarTodos(): Flow<List<ProductoImportado>>
+    + observarPorId(productoId: Long): Flow<ProductoImportado?>
+    + obtenerPorId(productoId: Long): ProductoImportado?
+    + upsert(producto: ProductoImportado): Long
+  }
+
+  class RepositorioEvaluacionComercialRoom {
+    - evaluacionDao: EvaluacionComercialDao
+    + observarUltimo(productoId: Long): Flow<EvaluacionComercial?>
+    + observarUltimosDeTodos(): Flow<List<EvaluacionComercial>>
+    + obtenerHistorial(productoId: Long, limite: Int): List<EvaluacionComercial>
+    + guardarEvaluacion(evaluacion: EvaluacionComercial)
+  }
+}
+
+package "data.api" {
+  interface ApisNetTipoCambioApi {
+    + obtenerTipoCambioSunat(fecha: String?): ApisNetTipoCambioResponse
+  }
+
+  class ApisNetTipoCambioResponse {
+    + origen: String?
+    + compra: Double?
+    + venta: Double?
+    + moneda: String?
+    + fecha: String?
+    + tasaVentaValida(): Double?
+    + fechaLocalOrNull(): LocalDate?
+    + esUsd(): Boolean
+  }
+
+  class TipoCambioCacheMemoria {
+    - clock: Clock
+    - cache: LinkedHashMap<LocalDate, CotizacionTipoCambio>
+    + obtener(fecha: LocalDate): CotizacionTipoCambio?
+    + guardar(fecha: LocalDate, cotizacion: CotizacionTipoCambio)
+    + obtenerMasRecienteHasta(fechaMaxima: LocalDate): CotizacionTipoCambio?
+    + cantidadEntradas(): Int
+  }
+
+  class ProveedorTipoCambioApisNet {
+    - api: ApisNetTipoCambioApi
+    - cache: TipoCambioCacheMemoria
+    - clock: Clock
+    + nombreProveedor: String
+    + obtenerTasaVentaUsdPen(): CotizacionTipoCambio
+  }
+
+  class ProveedorMarketplaceDemo {
+    + nombreProveedor: String
+    + buscar(query: String, limit: Int): List<PublicacionMercado>
+  }
+
+  class ProveedorFiltroNlpDemo {
+    + nombreProveedor: String
+    + filtrar(publicaciones: List<PublicacionMercado>, producto: ProductoImportado): ResultadoFiltroNlp
+  }
+}
+
+ProductoRadarItem --> ProductoImportado
+ProductoRadarItem --> EvaluacionComercial
+ProductoImportado *-- ComponentesCostoImportacion
+EvaluacionComercial *-- MetricasTendencia
+ResultadoFiltroNlp *-- PublicacionComparable
+
+ViewModelRadarProductos --> ObservarRadarProductosUseCase
+ViewModelFormularioProducto --> GuardarProductoImportadoUseCase
+ViewModelDetalleProducto --> ObservarDetalleProductoUseCase
+ViewModelDetalleProducto --> ObservarUltimaEvaluacionUseCase
+ViewModelDetalleProducto --> EvaluarTendenciaProductoUseCase
+
+ObservarRadarProductosUseCase --> RepositorioProductoImportado
+ObservarRadarProductosUseCase --> RepositorioEvaluacionComercial
+ObservarDetalleProductoUseCase --> RepositorioProductoImportado
+ObservarUltimaEvaluacionUseCase --> RepositorioEvaluacionComercial
+GuardarProductoImportadoUseCase --> RepositorioProductoImportado
+
+EvaluarTendenciaProductoUseCase --> RepositorioProductoImportado
+EvaluarTendenciaProductoUseCase --> RepositorioEvaluacionComercial
+EvaluarTendenciaProductoUseCase --> ProveedorTipoCambio
+EvaluarTendenciaProductoUseCase --> ProveedorMarketplace
+EvaluarTendenciaProductoUseCase --> ProveedorFiltroNlp
+
+RepositorioProductoImportadoRoom ..|> RepositorioProductoImportado
+RepositorioEvaluacionComercialRoom ..|> RepositorioEvaluacionComercial
+RepositorioProductoImportadoRoom --> ProductoImportadoDao
+RepositorioEvaluacionComercialRoom --> EvaluacionComercialDao
+ProductoImportadoDao --> ProductoImportadoEntity
+EvaluacionComercialDao --> EvaluacionComercialEntity
+ChangeScoutDatabase --> ProductoImportadoDao
+ChangeScoutDatabase --> EvaluacionComercialDao
+ProductoImportadoEntity ..> ProductoImportado
+EvaluacionComercialEntity ..> EvaluacionComercial
+
+ProveedorTipoCambioApisNet ..|> ProveedorTipoCambio
+ProveedorTipoCambioApisNet --> ApisNetTipoCambioApi
+ProveedorTipoCambioApisNet --> TipoCambioCacheMemoria
+ProveedorTipoCambioApisNet ..> CotizacionTipoCambio
+ApisNetTipoCambioApi --> ApisNetTipoCambioResponse
+TipoCambioCacheMemoria --> CotizacionTipoCambio
+ProveedorMarketplaceDemo ..|> ProveedorMarketplace
+ProveedorMarketplaceDemo ..> PublicacionMercado
+ProveedorFiltroNlpDemo ..|> ProveedorFiltroNlp
+ProveedorFiltroNlpDemo ..> ResultadoFiltroNlp
+ProveedorFiltroNlpDemo ..> PublicacionMercado
+
+@enduml

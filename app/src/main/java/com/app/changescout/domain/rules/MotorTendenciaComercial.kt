@@ -1,19 +1,19 @@
 package com.app.changescout.domain.rules
 
-import com.app.changescout.domain.model.EstadoSnapshot
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.MetricasTendencia
-import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.EvaluacionComercial
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 class MotorTendenciaComercial @Inject constructor() {
     fun calcular(
-        actual: SnapshotEvaluacionComercial,
-        historial: List<SnapshotEvaluacionComercial>
+        actual: EvaluacionComercial,
+        historial: List<EvaluacionComercial>
     ): MetricasTendencia {
         val historialValido = historial
-            .filter { snapshot -> snapshot.esComparableCon(actual) }
-            .sortedByDescending { snapshot -> snapshot.evaluadoEn }
+            .filter { evaluacion -> evaluacion.esComparableCon(actual) }
+            .sortedByDescending { evaluacion -> evaluacion.evaluadoEn }
 
         return MetricasTendencia(
             erosionPrecioLocalPct = calcularVariacionContraPromedio(
@@ -35,13 +35,13 @@ class MotorTendenciaComercial @Inject constructor() {
         )
     }
 
-    private fun SnapshotEvaluacionComercial.esComparableCon(
-        actual: SnapshotEvaluacionComercial
+    private fun EvaluacionComercial.esComparableCon(
+        actual: EvaluacionComercial
     ): Boolean {
         return productoId == actual.productoId &&
             evaluadoEn.isBefore(actual.evaluadoEn) &&
-            estadoSnapshot != EstadoSnapshot.FALLIDO &&
-            estadoSnapshot != EstadoSnapshot.INCONCLUSO
+            estadoEvaluacion != EstadoEvaluacion.FALLIDO &&
+            estadoEvaluacion != EstadoEvaluacion.INCONCLUSO
     }
 
     private fun calcularVariacionContraPromedio(
@@ -60,8 +60,8 @@ class MotorTendenciaComercial @Inject constructor() {
     }
 
     private fun calcularVentanaHistoricaDias(
-        actual: SnapshotEvaluacionComercial,
-        historial: List<SnapshotEvaluacionComercial>
+        actual: EvaluacionComercial,
+        historial: List<EvaluacionComercial>
     ): Int {
         val masAntiguo = historial.minByOrNull { it.evaluadoEn } ?: return 0
         return ChronoUnit.DAYS

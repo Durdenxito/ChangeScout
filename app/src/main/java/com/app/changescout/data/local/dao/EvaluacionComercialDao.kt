@@ -3,11 +3,11 @@ package com.app.changescout.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
-import com.app.changescout.data.local.entity.SnapshotEvaluacionComercialEntity
+import com.app.changescout.data.local.entity.EvaluacionComercialEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface SnapshotEvaluacionComercialDao {
+interface EvaluacionComercialDao {
     @Query(
         """
         SELECT *
@@ -17,23 +17,23 @@ interface SnapshotEvaluacionComercialDao {
         LIMIT 1
         """
     )
-    fun observarUltimo(productoId: Long): Flow<SnapshotEvaluacionComercialEntity?>
+    fun observarUltimo(productoId: Long): Flow<EvaluacionComercialEntity?>
 
     @Query(
         """
-        SELECT snapshot.*
-        FROM snapshots_evaluacion_comercial AS snapshot
+        SELECT evaluacion.*
+        FROM snapshots_evaluacion_comercial AS evaluacion
         INNER JOIN (
             SELECT productoId, MAX(evaluadoEnEpochMillis) AS ultimoEvaluadoEn
             FROM snapshots_evaluacion_comercial
             GROUP BY productoId
         ) AS ultimo
-        ON snapshot.productoId = ultimo.productoId
-        AND snapshot.evaluadoEnEpochMillis = ultimo.ultimoEvaluadoEn
-        ORDER BY snapshot.evaluadoEnEpochMillis DESC
+        ON evaluacion.productoId = ultimo.productoId
+        AND evaluacion.evaluadoEnEpochMillis = ultimo.ultimoEvaluadoEn
+        ORDER BY evaluacion.evaluadoEnEpochMillis DESC
         """
     )
-    fun observarUltimosDeTodos(): Flow<List<SnapshotEvaluacionComercialEntity>>
+    fun observarUltimosDeTodos(): Flow<List<EvaluacionComercialEntity>>
 
     @Query(
         """
@@ -47,8 +47,8 @@ interface SnapshotEvaluacionComercialDao {
     suspend fun obtenerHistorial(
         productoId: Long,
         limite: Int
-    ): List<SnapshotEvaluacionComercialEntity>
+    ): List<EvaluacionComercialEntity>
 
     @Insert
-    suspend fun insertar(snapshot: SnapshotEvaluacionComercialEntity): Long
+    suspend fun insertar(evaluacion: EvaluacionComercialEntity): Long
 }

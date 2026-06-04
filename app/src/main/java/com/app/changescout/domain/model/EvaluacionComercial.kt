@@ -2,8 +2,8 @@ package com.app.changescout.domain.model
 
 import java.time.Instant
 
-data class SnapshotEvaluacionComercial(
-    val snapshotId: Long,
+data class EvaluacionComercial(
+    val evaluacionId: Long,
     val productoId: Long,
     val costoTotalUsd: Double?,
     val costoTotalPen: Double?,
@@ -13,14 +13,14 @@ data class SnapshotEvaluacionComercial(
     val margenNetoPct: Double?,
     val metricasTendencia: MetricasTendencia?,
     val veredicto: VeredictoComercial?,
-    val estadoSnapshot: EstadoSnapshot,
+    val estadoEvaluacion: EstadoEvaluacion,
     val evaluadoEn: Instant,
     val versionAlgoritmo: String,
     val trazaProveedor: String?
 ) {
     fun esConclusivo(): Boolean {
-        return estadoSnapshot != EstadoSnapshot.INCONCLUSO &&
-            estadoSnapshot != EstadoSnapshot.FALLIDO &&
+        return estadoEvaluacion != EstadoEvaluacion.INCONCLUSO &&
+            estadoEvaluacion != EstadoEvaluacion.FALLIDO &&
             veredicto != null &&
             veredicto != VeredictoComercial.INCONCLUSO
     }
@@ -41,7 +41,7 @@ enum class VeredictoComercial {
     INCONCLUSO
 }
 
-enum class EstadoSnapshot {
+enum class EstadoEvaluacion {
     VIGENTE,
     OBSOLETO,
     INCONCLUSO,
