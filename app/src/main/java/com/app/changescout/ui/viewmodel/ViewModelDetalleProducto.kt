@@ -1,0 +1,144 @@
+package com.app.changescout.ui.viewmodel
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.app.changescout.domain.model.ProductoImportado
+import com.app.changescout.domain.model.ResultadoOperacion
+import com.app.changescout.domain.model.SnapshotEvaluacionComercial
+import com.app.changescout.domain.model.VeredictoComercial
+import com.app.changescout.domain.usecase.EvaluarTendenciaProductoUseCase
+import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
+import com.app.changescout.domain.usecase.ObservarUltimoSnapshotUseCase
+import com.app.changescout.ui.navigation.DestinoApp
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class EstadoUiDetalleProducto(
+    val producto: ProductoImportado? = null,
+    val snapshot: SnapshotEvaluacionComercial? = null,
+    val estaCargando: Boolean = true,
+    val estaEvaluando: Boolean = false,
+    val mensajeError: String? = null
+)
+
+sealed interface EventoDetalleProducto {
+    data object EvaluarProductoActualSolicitado : EventoDetalleProducto
+    data object RegresarDesdeDetalleSolicitado : EventoDetalleProducto
+}
+
+sealed interface EfectoDetalleProducto {
+    data object NavegarAtrasDesdeDetalle : EfectoDetalleProducto
+    data class MostrarMensajeDetalle(val mensaje: String) : EfectoDetalleProducto
+}
+
+@HiltViewModel
+class ViewModelDetalleProducto @Inject constructor(
+    private val observarDetalleProductoUseCase: ObservarDetalleProductoUseCase,
+    private val observarUltimoSnapshotUseCase: ObservarUltimoSnapshotUseCase,
+    private val evaluarTendenciaProductoUseCase: EvaluarTendenciaProductoUseCase,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+    private val productoId: Long = savedStateHandle.get<Long>(DestinoApp.ARG_PRODUCTO_ID) ?: 0L
+
+    private val _uiState = MutableStateFlow(EstadoUiDetalleProducto())
+    val uiState: StateFlow<EstadoUiDetalleProducto> = _uiState.asStateFlow()
+
+    private val _uiEffect = MutableSharedFlow<EfectoDetalleProducto>()
+    val uiEffect: SharedFlow<EfectoDetalleProducto> = _uiEffect.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            combine(
+                observarDetalleProductoUseCase(productoId),
+                observarUltimoSnapshotUseCase(productoId)
+            ) { producto, snapshot ->
+                producto to snapshot
+            }.collect { (producto, snapshot) ->
+                _uiState.update { estado ->
+                    estado.copy(
+                        producto = producto,
+                        snapshot = snapshot,
+                        estaCargando = false,
+                        mensajeError = if (producto == null) {
+                            "No encontramos este producto en el radar actual."
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    fun onEvent(event: EventoDetalleProducto) {
+        viewModelScope.launch {
+            when (event) {
+                EventoDetalleProducto.EvaluarProductoActualSolicitado -> {
+                    evaluarProductoActual()
+                }
+
+                EventoDetalleProducto.RegresarDesdeDetalleSolicitado -> {
+                    _uiEffect.emit(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
+                }
+            }
+        }
+    }
+
+    private suspend fun evaluarProductoActual() {
+        if (_uiState.value.estaEvaluando) return
+
+        _uiState.update { estado ->
+            estado.copy(estaEvaluando = true, mensajeError = null)
+        }
+
+        when (val resultado = evaluarTendenciaProductoUseCase(productoId)) {
+            is ResultadoOperacion.Exito -> {
+                _uiEffect.emit(
+                    EfectoDetalleProducto.MostrarMensajeDetalle(
+                        "Lectura actualizada: ${resultado.data.veredicto.aTextoPresentable()}."
+                    )
+                )
+            }
+            is ResultadoOperacion.DatosObsoletos -> {
+                _uiEffect.emit(
+                    EfectoDetalleProducto.MostrarMensajeDetalle(
+                        "Lectura generada con datos obsoletos: ${resultado.causa.mensaje}"
+                    )
+                )
+            }
+            is ResultadoOperacion.Fallo -> {
+                _uiState.update { estado ->
+                    estado.copy(mensajeError = resultado.error.mensaje)
+                }
+                _uiEffect.emit(
+                    EfectoDetalleProducto.MostrarMensajeDetalle(resultado.error.mensaje)
+                )
+            }
+        }
+
+        _uiState.update { estado ->
+            estado.copy(estaEvaluando = false)
+        }
+    }
+
+    private fun VeredictoComercial?.aTextoPresentable(): String {
+        return when (this) {
+            VeredictoComercial.SALUDABLE -> "Saludable"
+            VeredictoComercial.PRECAUCION -> "Precaucion"
+            VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Alerta temprana"
+            VeredictoComercial.LIQUIDACION -> "Liquidacion"
+            VeredictoComercial.INCONCLUSO -> "Inconcluso"
+            null -> "Sin clasificar"
+        }
+    }
+}
