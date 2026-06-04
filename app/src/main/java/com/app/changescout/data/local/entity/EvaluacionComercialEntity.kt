@@ -3,7 +3,6 @@ package com.app.changescout.data.local.entity
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
-import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.EvaluacionComercial
@@ -12,7 +11,7 @@ import com.app.changescout.domain.model.VeredictoComercial
 import java.time.Instant
 
 @Entity(
-    tableName = "snapshots_evaluacion_comercial",
+    tableName = "evaluaciones_comerciales",
     foreignKeys = [
         ForeignKey(
             entity = ProductoImportadoEntity::class,
@@ -28,7 +27,6 @@ import java.time.Instant
 )
 data class EvaluacionComercialEntity(
     @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "snapshotId")
     val evaluacionId: Long = 0L,
     val productoId: Long,
     val costoTotalUsd: Double?,
@@ -42,7 +40,6 @@ data class EvaluacionComercialEntity(
     val presionCambiariaPct: Double?,
     val ventanaHistoricaDias: Int?,
     val veredicto: String?,
-    @ColumnInfo(name = "estadoSnapshot")
     val estadoEvaluacion: String,
     val evaluadoEnEpochMillis: Long,
     val versionAlgoritmo: String,

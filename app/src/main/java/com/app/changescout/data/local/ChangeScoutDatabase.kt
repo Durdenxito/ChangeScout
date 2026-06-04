@@ -12,7 +12,7 @@ import com.app.changescout.data.local.entity.EvaluacionComercialEntity
         ProductoImportadoEntity::class,
         EvaluacionComercialEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class ChangeScoutDatabase : RoomDatabase() {

@@ -175,32 +175,28 @@ private fun ContenidoFormularioProducto(
                 CampoPremium(
                     value = state.fleteUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.FleteUsdCambiado(it)) },
-                    label = "Envio internacional (USD)",
-                    supportingText = "Costo de transporte hasta destino. Si no aplica, dejalo vacio.",
+                    label = "Envio internacional (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
                 CampoPremium(
                     value = state.seguroUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.SeguroUsdCambiado(it)) },
-                    label = "Seguro de carga (USD)",
-                    supportingText = "Proteccion de la mercaderia. Si no aplica, dejalo vacio.",
+                    label = "Seguro de carga (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
                 CampoPremium(
                     value = state.arancelesUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.ArancelesUsdCambiado(it)) },
-                    label = "Impuestos de importacion (USD)",
-                    supportingText = "Tributos, aranceles u otros pagos de ingreso.",
+                    label = "Impuestos de importacion (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
                 CampoPremium(
                     value = state.otrosCargosUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.OtrosCargosUsdCambiado(it)) },
-                    label = "Gastos adicionales (USD)",
-                    supportingText = "Agente, almacenaje, manejo u otros. Si no aplica, dejalo vacio.",
+                    label = "Gastos adicionales (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )

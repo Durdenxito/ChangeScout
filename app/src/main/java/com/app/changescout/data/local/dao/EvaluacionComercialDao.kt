@@ -11,7 +11,7 @@ interface EvaluacionComercialDao {
     @Query(
         """
         SELECT *
-        FROM snapshots_evaluacion_comercial
+        FROM evaluaciones_comerciales
         WHERE productoId = :productoId
         ORDER BY evaluadoEnEpochMillis DESC
         LIMIT 1
@@ -22,10 +22,10 @@ interface EvaluacionComercialDao {
     @Query(
         """
         SELECT evaluacion.*
-        FROM snapshots_evaluacion_comercial AS evaluacion
+        FROM evaluaciones_comerciales AS evaluacion
         INNER JOIN (
             SELECT productoId, MAX(evaluadoEnEpochMillis) AS ultimoEvaluadoEn
-            FROM snapshots_evaluacion_comercial
+            FROM evaluaciones_comerciales
             GROUP BY productoId
         ) AS ultimo
         ON evaluacion.productoId = ultimo.productoId
@@ -38,7 +38,7 @@ interface EvaluacionComercialDao {
     @Query(
         """
         SELECT *
-        FROM snapshots_evaluacion_comercial
+        FROM evaluaciones_comerciales
         WHERE productoId = :productoId
         ORDER BY evaluadoEnEpochMillis DESC
         LIMIT :limite

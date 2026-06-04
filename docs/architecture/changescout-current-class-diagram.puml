@@ -179,8 +179,13 @@ package "domain.usecase" {
 
 package "data.local" {
   class ChangeScoutDatabase {
+    + version: 2
     + productoImportadoDao(): ProductoImportadoDao
     + evaluacionComercialDao(): EvaluacionComercialDao
+  }
+
+  class ChangeScoutMigrations {
+    + MIGRATION_1_2: Migration
   }
 
   interface ProductoImportadoDao {
@@ -327,6 +332,7 @@ ProductoImportadoDao --> ProductoImportadoEntity
 EvaluacionComercialDao --> EvaluacionComercialEntity
 ChangeScoutDatabase --> ProductoImportadoDao
 ChangeScoutDatabase --> EvaluacionComercialDao
+ChangeScoutDatabase ..> ChangeScoutMigrations
 ProductoImportadoEntity ..> ProductoImportado
 EvaluacionComercialEntity ..> EvaluacionComercial
 

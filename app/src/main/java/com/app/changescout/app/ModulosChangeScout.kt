@@ -9,6 +9,7 @@ import com.app.changescout.data.api.apisnet.TipoCambioCacheMemoria
 import com.app.changescout.data.api.marketplace.demo.ProveedorMarketplaceDemo
 import com.app.changescout.data.api.nlp.demo.ProveedorFiltroNlpDemo
 import com.app.changescout.data.local.ChangeScoutDatabase
+import com.app.changescout.data.local.ChangeScoutMigrations
 import com.app.changescout.data.local.dao.ProductoImportadoDao
 import com.app.changescout.data.local.dao.EvaluacionComercialDao
 import com.app.changescout.data.repository.RepositorioEvaluacionComercialRoom
@@ -103,7 +104,9 @@ object ModulosChangeScout {
             context,
             ChangeScoutDatabase::class.java,
             "changescout.db"
-        ).build()
+        )
+            .addMigrations(ChangeScoutMigrations.MIGRATION_1_2)
+            .build()
     }
 
     @Provides
