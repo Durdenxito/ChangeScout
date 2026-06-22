@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ChangeScout"
 include(":app")
- 
+include(":backend")

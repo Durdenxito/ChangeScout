@@ -197,6 +197,15 @@ private fun ContenidoDetalleProducto(
                     state.evaluacion.evaluacionResumen()
                 }
 
+                if (state.estaEvaluando) {
+                    ChipOperativo(
+                        texto = "Consultando mercado en vivo",
+                        icono = Icons.Outlined.Search,
+                        modifier = Modifier.fillMaxWidth(),
+                        contenedor = SignalGold.copy(alpha = 0.18f)
+                    )
+                }
+
                 Button(
                     onClick = {
                         onEvent(EventoDetalleProducto.EvaluarProductoActualSolicitado)
@@ -218,7 +227,7 @@ private fun ContenidoDetalleProducto(
                         Icon(Icons.Outlined.QueryStats, contentDescription = null)
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text(if (state.estaEvaluando) "Evaluando..." else "Solicitar lectura")
+                    Text(if (state.estaEvaluando) "Consultando..." else "Solicitar lectura")
                 }
             }
 

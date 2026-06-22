@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+val marketplaceBackendUrl = providers.gradleProperty("MARKETPLACE_BACKEND_URL")
+    .orElse("https://changescout-backend.invalid/")
+    .get()
+
 android {
     namespace = "com.app.changescout"
     compileSdk {
@@ -24,7 +28,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "MARKETPLACE_BACKEND_URL", "\"http://10.0.2.2:8080/\"")
+        }
         release {
+            buildConfigField("String", "MARKETPLACE_BACKEND_URL", "\"$marketplaceBackendUrl\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -39,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

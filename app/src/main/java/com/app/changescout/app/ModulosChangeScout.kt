@@ -6,7 +6,9 @@ import com.app.changescout.data.api.apisnet.ApisNetTipoCambioApi
 import com.app.changescout.data.api.apisnet.ApisNetTipoCambioConfig
 import com.app.changescout.data.api.apisnet.ProveedorTipoCambioApisNet
 import com.app.changescout.data.api.apisnet.TipoCambioCacheMemoria
-import com.app.changescout.data.api.marketplace.demo.ProveedorMarketplaceDemo
+import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceApi
+import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceConfig
+import com.app.changescout.data.api.marketplace.backend.ProveedorMarketplaceBackend
 import com.app.changescout.data.api.nlp.demo.ProveedorFiltroNlpDemo
 import com.app.changescout.data.local.ChangeScoutDatabase
 import com.app.changescout.data.local.ChangeScoutMigrations
@@ -45,8 +47,8 @@ object ModulosChangeScout {
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
@@ -65,6 +67,19 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
+    fun provideBackendMarketplaceApi(
+        okHttpClient: OkHttpClient
+    ): BackendMarketplaceApi {
+        return Retrofit.Builder()
+            .baseUrl(BackendMarketplaceConfig.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(BackendMarketplaceApi::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideProveedorTipoCambio(
         api: ApisNetTipoCambioApi,
         cache: TipoCambioCacheMemoria,
@@ -75,8 +90,10 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
-    fun provideProveedorMarketplace(): ProveedorMarketplace {
-        return ProveedorMarketplaceDemo()
+    fun provideProveedorMarketplace(
+        api: BackendMarketplaceApi
+    ): ProveedorMarketplace {
+        return ProveedorMarketplaceBackend(api)
     }
 
     @Provides

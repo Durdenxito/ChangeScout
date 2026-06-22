@@ -294,6 +294,26 @@ package "data.api" {
     + buscar(query: String, limit: Int): List<PublicacionMercado>
   }
 
+  interface BackendMarketplaceApi {
+    + buscarPublicaciones(query: String, country: String, limit: Int): List<BackendPublicacionDto>
+  }
+
+  class BackendPublicacionDto {
+    + id: String?
+    + title: String?
+    + price: Double?
+    + currency: String?
+    + condition: String?
+    + url: String?
+    + toDomain(nombreFuente: String): PublicacionMercado?
+  }
+
+  class ProveedorMarketplaceBackend {
+    - api: BackendMarketplaceApi
+    + nombreProveedor: String
+    + buscar(query: String, limit: Int): List<PublicacionMercado>
+  }
+
   class ProveedorFiltroNlpDemo {
     + nombreProveedor: String
     + filtrar(publicaciones: List<PublicacionMercado>, producto: ProductoImportado): ResultadoFiltroNlp
@@ -344,6 +364,11 @@ ApisNetTipoCambioApi --> ApisNetTipoCambioResponse
 TipoCambioCacheMemoria --> CotizacionTipoCambio
 ProveedorMarketplaceDemo ..|> ProveedorMarketplace
 ProveedorMarketplaceDemo ..> PublicacionMercado
+ProveedorMarketplaceBackend ..|> ProveedorMarketplace
+ProveedorMarketplaceBackend --> BackendMarketplaceApi
+ProveedorMarketplaceBackend ..> PublicacionMercado
+BackendMarketplaceApi --> BackendPublicacionDto
+BackendPublicacionDto ..> PublicacionMercado
 ProveedorFiltroNlpDemo ..|> ProveedorFiltroNlp
 ProveedorFiltroNlpDemo ..> ResultadoFiltroNlp
 ProveedorFiltroNlpDemo ..> PublicacionMercado
