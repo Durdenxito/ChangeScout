@@ -3,9 +3,14 @@ set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/Durdenxito/ChangeScout.git}"
 BRANCH="${BRANCH:-main}"
-REPO_DIR="${REPO_DIR:-/opt/changescout/repo}"
+REPO_DIR="${REPO_DIR:-/opt/changescout/source}"
 APP_DIR="${APP_DIR:-/opt/changescout/backend}"
 SERVICE_NAME="${SERVICE_NAME:-changescout-backend}"
+
+if [ "$REPO_DIR" = "$APP_DIR" ]; then
+  echo "REPO_DIR y APP_DIR no pueden ser iguales"
+  exit 1
+fi
 
 case "$APP_DIR" in
   /opt/changescout/*) ;;
