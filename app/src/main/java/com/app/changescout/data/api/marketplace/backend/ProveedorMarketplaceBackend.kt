@@ -1,5 +1,6 @@
 package com.app.changescout.data.api.marketplace.backend
 
+import com.app.changescout.data.api.backend.BackendProxyConfig
 import com.app.changescout.domain.model.ErrorOperacion
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoOperacion
@@ -13,7 +14,7 @@ import retrofit2.HttpException
 class ProveedorMarketplaceBackend @Inject constructor(
     private val api: BackendMarketplaceApi
 ) : ProveedorMarketplace {
-    override val nombreProveedor: String = BackendMarketplaceConfig.NOMBRE_PROVEEDOR
+    override val nombreProveedor: String = BackendProxyConfig.NOMBRE_PROVEEDOR_MARKETPLACE
 
     override suspend fun buscar(
         query: String,
@@ -27,7 +28,7 @@ class ProveedorMarketplaceBackend @Inject constructor(
         }
 
         return try {
-            val limiteSeguro = limit.coerceIn(1, BackendMarketplaceConfig.LIMITE_MAXIMO_BUSQUEDA)
+            val limiteSeguro = limit.coerceIn(1, BackendProxyConfig.LIMITE_MAXIMO_BUSQUEDA)
             val publicaciones = api.buscarPublicaciones(
                 query = querySeguro,
                 limit = limiteSeguro

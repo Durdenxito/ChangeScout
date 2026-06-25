@@ -2,7 +2,7 @@
 
 ChangeScout es una aplicacion Android nativa para micro-importadores. Funciona como radar de tendencia comercial y simulador de costo en destino, no como e-commerce ni POS.
 
-La app permite registrar productos importados, calcular costo total en USD/PEN, consultar tipo de cambio USD/PEN, comparar contra precios de mercado simulados, filtrar resultados mediante un proveedor NLP demo y guardar evaluaciones comerciales historicas para detectar riesgo de margen, saturacion y presion cambiaria.
+La app permite registrar productos importados, calcular costo total en USD/PEN, consultar tipo de cambio USD/PEN, comparar contra precios de mercado mediante el backend, filtrar resultados con NLP en Groq y guardar evaluaciones comerciales historicas para detectar riesgo de margen, saturacion y presion cambiaria.
 
 ## Stack
 
@@ -22,15 +22,15 @@ El proyecto separa responsabilidades en capas:
 
 - `ui`: pantallas Compose, navegacion y ViewModels.
 - `domain`: modelos, contratos de repositorio, reglas y casos de uso.
-- `data`: Room, Retrofit, proveedores demo y repositorios concretos.
+- `data`: Room, Retrofit, proveedores backend y repositorios concretos.
 
 Los ViewModels no calculan costos, margenes ni tendencias. Esa logica vive en casos de uso y reglas de dominio.
 
 ## Estado actual
 
 - Tipo de cambio real con APIS.NET.
-- Marketplace demo intercambiable por MercadoLibre.
-- Filtro NLP demo intercambiable por OpenAI.
+- Marketplace via backend Ktor con Apify/MercadoLibre.
+- Filtro NLP via backend Ktor con Groq.
 - Persistencia local con Room.
 - Tabla `productos_importados` para fichas base.
 - Tabla `evaluaciones_comerciales` para evaluaciones historicas.

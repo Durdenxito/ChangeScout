@@ -1,5 +1,6 @@
 package com.app.changescout.data.api.nlp.backend
 
+import com.app.changescout.data.api.backend.BackendProxyConfig
 import com.app.changescout.domain.model.ErrorOperacion
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.PublicacionMercado
@@ -15,7 +16,7 @@ import retrofit2.HttpException
 class ProveedorFiltroNlpBackend @Inject constructor(
     private val api: BackendNlpApi
 ) : ProveedorFiltroNlp {
-    override val nombreProveedor: String = BackendNlpConfig.NOMBRE_PROVEEDOR
+    override val nombreProveedor: String = BackendProxyConfig.NOMBRE_PROVEEDOR_NLP
 
     override suspend fun filtrar(
         publicaciones: List<PublicacionMercado>,

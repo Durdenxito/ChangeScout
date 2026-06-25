@@ -160,8 +160,8 @@ y tendencia historica.
 | Area | Estado actual | Objetivo |
 | --- | --- | --- |
 | Tipo de cambio | APIS.NET real | Mantener proveedor reemplazable |
-| Marketplace | Proveedor demo | Reemplazar por MercadoLibre |
-| NLP | Proveedor demo | Reemplazar por OpenAI |
+| Marketplace | Backend Ktor con Apify/MercadoLibre | Mantener proveedor reemplazable |
+| NLP | Backend Ktor con Groq | Mantener proveedor reemplazable |
 
 ## 5.3 Persistencia actual
 
@@ -200,7 +200,7 @@ nomenclatura anterior basada en snapshots.
 | RNF-03 | Estado reactivo | La UI debe exponerse mediante StateFlow y los eventos unicos mediante SharedFlow. | Alta |
 | RNF-04 | Seguridad de secretos | Las API keys no deben quedar expuestas en codigo fuente, logs ni UI. | Critica |
 | RNF-05 | Tolerancia a fallos | Timeouts, errores HTTP, respuestas invalidas y limites de cuota deben mapearse a errores de dominio controlados. | Alta |
-| RNF-06 | JSON estricto | La integracion real con OpenAI debe validar estructura y tipos antes de usar los datos en dominio. | Alta |
+| RNF-06 | JSON estructurado | La integracion real con el proveedor NLP debe validar estructura y tipos antes de usar los datos en dominio. | Alta |
 | RNF-07 | Offline-first | La app debe poder renderizar datos locales aun cuando falle la red. | Alta |
 | RNF-08 | Eficiencia | Las consultas historicas deben usar ventanas acotadas y no todo el historial innecesariamente. | Media |
 | RNF-09 | Trazabilidad | Cada evaluacion debe conservar fecha, proveedor, version de algoritmo y estado de vigencia. | Alta |
@@ -317,9 +317,9 @@ producto.
 
 - feed vivo de tipo de cambio,
 - listados crudos completos de marketplace,
-- prompts enviados a OpenAI,
+- prompts enviados al proveedor NLP,
 - payloads completos de proveedores,
-- respuestas completas de OpenAI,
+- respuestas completas del proveedor NLP,
 - datos temporales de red como entidades permanentes.
 
 ## 9.4 Migracion de base de datos
@@ -362,8 +362,8 @@ Hilt entrega implementaciones concretas:
 RepositorioProductoImportado -> RepositorioProductoImportadoRoom
 RepositorioEvaluacionComercial -> RepositorioEvaluacionComercialRoom
 ProveedorTipoCambio -> ProveedorTipoCambioApisNet
-ProveedorMarketplace -> ProveedorMarketplaceDemo
-ProveedorFiltroNlp -> ProveedorFiltroNlpDemo
+ProveedorMarketplace -> ProveedorMarketplaceBackend
+ProveedorFiltroNlp -> ProveedorFiltroNlpBackend
 ```
 
 # 11. Diagramas
@@ -401,19 +401,15 @@ evaluaciones comerciales historicas sin almacenar datos volatiles como
 feeds vivos de tipo de cambio o listados crudos de marketplace.
 
 La version actual permite una primera demo funcional con tipo de cambio
-real, proveedores demo para mercado/NLP, evaluacion bajo demanda, calculo
-de landed cost y clasificacion de veredicto comercial.
+real, proveedores backend para mercado/NLP, evaluacion bajo demanda,
+calculo de landed cost y clasificacion de veredicto comercial.
 
 # 13. Recomendaciones
 
-1. Reemplazar `ProveedorMarketplaceDemo` por un adaptador real de
-   MercadoLibre manteniendo la interfaz de dominio.
-2. Reemplazar `ProveedorFiltroNlpDemo` por un adaptador real de OpenAI con
-   JSON estricto y validacion robusta.
-3. Proteger claves de API mediante backend intermedio o configuracion
+1. Proteger claves de API mediante backend intermedio o configuracion
    segura fuera del codigo fuente.
-4. Agregar pruebas de migracion Room para validar la migracion `1 -> 2`.
-5. Mejorar la pantalla de detalle para mostrar trazabilidad completa de la
+2. Agregar pruebas de migracion Room para validar la migracion `1 -> 2`.
+3. Mejorar la pantalla de detalle para mostrar trazabilidad completa de la
    evaluacion.
-6. Mantener los proveedores externos desacoplados para permitir cambiar
+4. Mantener los proveedores externos desacoplados para permitir cambiar
    APIs sin tocar casos de uso ni ViewModels.

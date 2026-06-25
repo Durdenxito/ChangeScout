@@ -279,65 +279,26 @@ interface NlpFiltroService {
     suspend fun filtrar(request: NlpFiltroRequest): NlpFiltroResponse
 }
 
-enum class NlpProvider {
-    GROQ,
-    OPENAI;
-
-    companion object {
-        fun fromEnvValue(value: String?): NlpProvider {
-            return when (value?.trim()?.lowercase()) {
-                "openai" -> OPENAI
-                else -> GROQ
-            }
-        }
-    }
-}
-
 data class NlpConfig(
-    val provider: NlpProvider,
-    val nombreProveedor: String,
-    val tokenEnvName: String,
     val token: String?,
     val model: String,
     val baseUrl: String,
     val timeoutMillis: Long,
-    val maxPublicaciones: Int,
-    val strictJsonSchema: Boolean
+    val maxPublicaciones: Int
 ) {
+    val nombreProveedor: String = "Groq"
     val responsesUrl: String = "${baseUrl.trimEnd('/')}/responses"
 
     companion object {
         fun fromEnv(): NlpConfig {
-            return when (NlpProvider.fromEnvValue(System.getenv("NLP_PROVIDER"))) {
-                NlpProvider.GROQ -> NlpConfig(
-                    provider = NlpProvider.GROQ,
-                    nombreProveedor = "Groq",
-                    tokenEnvName = "GROQ_API_KEY",
-                    token = System.getenv("GROQ_API_KEY"),
-                    model = System.getenv("GROQ_MODEL") ?: "llama-3.1-8b-instant",
-                    baseUrl = System.getenv("GROQ_BASE_URL") ?: "https://api.groq.com/openai/v1",
-                    timeoutMillis = envLongOrDefault("GROQ_TIMEOUT_MS", "NLP_TIMEOUT_MS", 60_000L),
-                    maxPublicaciones = envIntOrDefault("GROQ_NLP_MAX_PUBLICACIONES", "NLP_MAX_PUBLICACIONES", 10)
-                        .coerceIn(1, 20),
-                    strictJsonSchema = System.getenv("GROQ_STRICT_JSON")?.toBooleanStrictOrNull() ?: false
-                )
-
-                NlpProvider.OPENAI -> NlpConfig(
-                    provider = NlpProvider.OPENAI,
-                    nombreProveedor = "OpenAI",
-                    tokenEnvName = "OPENAI_API_KEY",
-                    token = System.getenv("OPENAI_API_KEY"),
-                    model = System.getenv("OPENAI_MODEL") ?: "gpt-4o-mini",
-                    baseUrl = System.getenv("OPENAI_BASE_URL") ?: "https://api.openai.com/v1",
-                    timeoutMillis = envLongOrDefault("OPENAI_TIMEOUT_MS", "NLP_TIMEOUT_MS", 60_000L),
-                    maxPublicaciones = envIntOrDefault(
-                        "OPENAI_NLP_MAX_PUBLICACIONES",
-                        "NLP_MAX_PUBLICACIONES",
-                        10
-                    ).coerceIn(1, 20),
-                    strictJsonSchema = System.getenv("OPENAI_STRICT_JSON")?.toBooleanStrictOrNull() ?: true
-                )
-            }
+            return NlpConfig(
+                token = System.getenv("GROQ_API_KEY"),
+                model = System.getenv("GROQ_MODEL") ?: "llama-3.1-8b-instant",
+                baseUrl = System.getenv("GROQ_BASE_URL") ?: "https://api.groq.com/openai/v1",
+                timeoutMillis = envLongOrDefault("GROQ_TIMEOUT_MS", "NLP_TIMEOUT_MS", 60_000L),
+                maxPublicaciones = envIntOrDefault("GROQ_NLP_MAX_PUBLICACIONES", "NLP_MAX_PUBLICACIONES", 10)
+                    .coerceIn(1, 20)
+            )
         }
     }
 }
@@ -351,7 +312,7 @@ class LlmNlpService(
 
     override suspend fun filtrar(request: NlpFiltroRequest): NlpFiltroResponse {
         val token = config.token?.takeIf { value -> value.isNotBlank() }
-            ?: throw NlpConfigException("Falta ${config.tokenEnvName} en el backend.")
+            ?: throw NlpConfigException("Falta GROQ_API_KEY en el backend.")
         val publicaciones = request.publicaciones
             .filter { publicacion ->
                 !publicacion.id.isNullOrBlank() &&
@@ -389,7 +350,7 @@ class LlmNlpService(
                         format = LlmJsonSchemaFormat(
                             name = "changescout_filtro_nlp",
                             schema = RESPUESTA_NLP_SCHEMA,
-                            strict = config.strictJsonSchema
+                            strict = false
                         )
                     )
                 )

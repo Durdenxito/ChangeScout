@@ -1,5 +1,6 @@
 package com.app.changescout.data.api.nlp.backend
 
+import com.app.changescout.data.api.backend.BackendProxyConfig
 import com.app.changescout.domain.model.CondicionPublicacion
 import com.app.changescout.domain.model.Moneda
 import com.app.changescout.domain.model.ProductoImportado
@@ -15,10 +16,6 @@ interface BackendNlpApi {
     suspend fun filtrarPublicaciones(
         @Body request: BackendNlpRequest
     ): BackendNlpResponse
-}
-
-object BackendNlpConfig {
-    const val NOMBRE_PROVEEDOR = "ChangeScout NLP Proxy"
 }
 
 data class BackendNlpRequest(
@@ -73,7 +70,7 @@ data class BackendNlpResponse(
             puntajeConfianza = puntajeConfianza?.coerceIn(0.0, 1.0),
             trazaProveedor = trazaProveedor
                 ?.takeIf { traza -> traza.isNotBlank() }
-                ?: BackendNlpConfig.NOMBRE_PROVEEDOR
+                ?: BackendProxyConfig.NOMBRE_PROVEEDOR_NLP
         )
     }
 }

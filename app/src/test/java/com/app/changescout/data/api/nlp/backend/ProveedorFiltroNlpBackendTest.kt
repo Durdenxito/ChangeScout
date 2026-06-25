@@ -28,7 +28,7 @@ class ProveedorFiltroNlpBackendTest {
                 precioPromedioRealPen = 104.0,
                 competidoresValidos = 2,
                 puntajeConfianza = 0.83,
-                trazaProveedor = "proveedor=OpenAI | total=3 | validas=2"
+                trazaProveedor = "proveedor=Groq | total=3 | validas=2"
             )
         }
         val proveedor = ProveedorFiltroNlpBackend(api)

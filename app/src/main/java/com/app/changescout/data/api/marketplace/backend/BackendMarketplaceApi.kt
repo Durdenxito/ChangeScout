@@ -1,6 +1,6 @@
 package com.app.changescout.data.api.marketplace.backend
 
-import com.app.changescout.BuildConfig
+import com.app.changescout.data.api.backend.BackendProxyConfig
 import com.app.changescout.domain.model.CondicionPublicacion
 import com.app.changescout.domain.model.Moneda
 import com.app.changescout.domain.model.PublicacionMercado
@@ -12,16 +12,9 @@ interface BackendMarketplaceApi {
     @GET("marketplace/search")
     suspend fun buscarPublicaciones(
         @Query("query") query: String,
-        @Query("country") country: String = BackendMarketplaceConfig.PAIS_PERU,
+        @Query("country") country: String = BackendProxyConfig.PAIS_PERU,
         @Query("limit") limit: Int
     ): List<BackendPublicacionDto>
-}
-
-object BackendMarketplaceConfig {
-    val BASE_URL: String = BuildConfig.MARKETPLACE_BACKEND_URL
-    const val NOMBRE_PROVEEDOR = "ChangeScout Marketplace Proxy"
-    const val PAIS_PERU = "PE"
-    const val LIMITE_MAXIMO_BUSQUEDA = 5
 }
 
 data class BackendPublicacionDto(

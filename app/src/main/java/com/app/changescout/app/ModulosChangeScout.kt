@@ -6,8 +6,8 @@ import com.app.changescout.data.api.apisnet.ApisNetTipoCambioApi
 import com.app.changescout.data.api.apisnet.ApisNetTipoCambioConfig
 import com.app.changescout.data.api.apisnet.ProveedorTipoCambioApisNet
 import com.app.changescout.data.api.apisnet.TipoCambioCacheMemoria
+import com.app.changescout.data.api.backend.BackendProxyConfig
 import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceApi
-import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceConfig
 import com.app.changescout.data.api.marketplace.backend.ProveedorMarketplaceBackend
 import com.app.changescout.data.api.nlp.backend.BackendNlpApi
 import com.app.changescout.data.api.nlp.backend.ProveedorFiltroNlpBackend
@@ -57,40 +57,19 @@ object ModulosChangeScout {
     @Singleton
     fun provideApisNetTipoCambioApi(
         okHttpClient: OkHttpClient
-    ): ApisNetTipoCambioApi {
-        return Retrofit.Builder()
-            .baseUrl(ApisNetTipoCambioConfig.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(ApisNetTipoCambioApi::class.java)
-    }
+    ): ApisNetTipoCambioApi = retrofitApi(ApisNetTipoCambioConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
     fun provideBackendMarketplaceApi(
         okHttpClient: OkHttpClient
-    ): BackendMarketplaceApi {
-        return Retrofit.Builder()
-            .baseUrl(BackendMarketplaceConfig.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(BackendMarketplaceApi::class.java)
-    }
+    ): BackendMarketplaceApi = retrofitApi(BackendProxyConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
     fun provideBackendNlpApi(
         okHttpClient: OkHttpClient
-    ): BackendNlpApi {
-        return Retrofit.Builder()
-            .baseUrl(BackendMarketplaceConfig.BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(BackendNlpApi::class.java)
-    }
+    ): BackendNlpApi = retrofitApi(BackendProxyConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
@@ -166,5 +145,17 @@ object ModulosChangeScout {
         evaluacionDao: EvaluacionComercialDao
     ): RepositorioEvaluacionComercial {
         return RepositorioEvaluacionComercialRoom(evaluacionDao)
+    }
+
+    private inline fun <reified T> retrofitApi(
+        baseUrl: String,
+        okHttpClient: OkHttpClient
+    ): T {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(T::class.java)
     }
 }

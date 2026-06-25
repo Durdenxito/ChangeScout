@@ -253,6 +253,14 @@ package "data.repository" {
 }
 
 package "data.api" {
+  class BackendProxyConfig {
+    + BASE_URL: String
+    + NOMBRE_PROVEEDOR_MARKETPLACE: String
+    + NOMBRE_PROVEEDOR_NLP: String
+    + PAIS_PERU: String
+    + LIMITE_MAXIMO_BUSQUEDA: Int
+  }
+
   interface ApisNetTipoCambioApi {
     + obtenerTipoCambioSunat(fecha: String?): ApisNetTipoCambioResponse
   }
@@ -397,11 +405,14 @@ ApisNetTipoCambioApi --> ApisNetTipoCambioResponse
 TipoCambioCacheMemoria --> CotizacionTipoCambio
 ProveedorMarketplaceBackend ..|> ProveedorMarketplace
 ProveedorMarketplaceBackend --> BackendMarketplaceApi
+ProveedorMarketplaceBackend ..> BackendProxyConfig
 ProveedorMarketplaceBackend ..> PublicacionMercado
 BackendMarketplaceApi --> BackendPublicacionDto
+BackendMarketplaceApi ..> BackendProxyConfig
 BackendPublicacionDto ..> PublicacionMercado
 ProveedorFiltroNlpBackend ..|> ProveedorFiltroNlp
 ProveedorFiltroNlpBackend --> BackendNlpApi
+ProveedorFiltroNlpBackend ..> BackendProxyConfig
 ProveedorFiltroNlpBackend ..> ResultadoFiltroNlp
 ProveedorFiltroNlpBackend ..> PublicacionMercado
 BackendNlpApi --> BackendNlpRequest
@@ -409,6 +420,7 @@ BackendNlpApi --> BackendNlpResponse
 BackendNlpRequest *-- BackendNlpProductoDto
 BackendNlpRequest *-- BackendNlpPublicacionDto
 BackendNlpResponse *-- BackendNlpPublicacionComparableDto
+BackendNlpResponse ..> BackendProxyConfig
 BackendNlpResponse ..> ResultadoFiltroNlp
 BackendNlpPublicacionComparableDto ..> PublicacionComparable
 
