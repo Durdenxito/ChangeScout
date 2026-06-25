@@ -58,6 +58,27 @@ class ProveedorFiltroNlpDemoTest {
         })
     }
 
+    @Test
+    fun filtrar_aceptaCondicionDesconocidaSiTituloEsValido() = runBlocking {
+        val resultado = proveedor.filtrar(
+            publicaciones = listOf(
+                publicacion(
+                    id = "1",
+                    titulo = "Audifonos inalambricos Xiaomi Redmi Buds",
+                    precio = 39.0,
+                    condicion = CondicionPublicacion.DESCONOCIDO
+                )
+            ),
+            producto = producto()
+        )
+
+        assertTrue(resultado is ResultadoOperacion.Exito)
+        val filtro = (resultado as ResultadoOperacion.Exito).data
+        assertEquals(1, filtro.competidoresValidos)
+        assertEquals(0, filtro.cantidadDescartadas)
+        assertEquals(39.0, filtro.precioPromedioRealPen ?: 0.0, 0.0001)
+    }
+
     private fun publicacion(
         id: String,
         titulo: String,

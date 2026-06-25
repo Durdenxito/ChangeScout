@@ -6,7 +6,12 @@ plugins {
 }
 
 val marketplaceBackendUrl = providers.gradleProperty("MARKETPLACE_BACKEND_URL")
+    .orElse(providers.environmentVariable("MARKETPLACE_BACKEND_URL"))
     .orElse("https://changescout-backend.invalid/")
+    .map { value ->
+        val url = value.trim()
+        if (url.endsWith("/")) url else "$url/"
+    }
     .get()
 
 android {
@@ -29,7 +34,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "MARKETPLACE_BACKEND_URL", "\"http://10.0.2.2:8080/\"")
+            buildConfigField("String", "MARKETPLACE_BACKEND_URL", "\"$marketplaceBackendUrl\"")
         }
         release {
             buildConfigField("String", "MARKETPLACE_BACKEND_URL", "\"$marketplaceBackendUrl\"")

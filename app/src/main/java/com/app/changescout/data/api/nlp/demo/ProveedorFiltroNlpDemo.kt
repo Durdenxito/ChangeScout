@@ -57,9 +57,7 @@ class ProveedorFiltroNlpDemo @Inject constructor() : ProveedorFiltroNlp {
         return when {
             publicacion.precio <= 0.0 -> DecisionFiltro.descartada("precio no valido")
             publicacion.moneda != Moneda.PEN -> DecisionFiltro.descartada("moneda no PEN")
-            publicacion.condicion != CondicionPublicacion.NUEVO -> {
-                DecisionFiltro.descartada("condicion no nueva")
-            }
+            publicacion.condicion == CondicionPublicacion.USADO -> DecisionFiltro.descartada("condicion usada")
             PALABRAS_CONTAMINANTES.any { palabra -> tituloNormalizado.contains(palabra) } -> {
                 DecisionFiltro.descartada("titulo contaminado")
             }

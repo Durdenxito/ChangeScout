@@ -29,3 +29,5 @@ docs/
 *.p12
 *.jks
 secrets.properties
+backend.zip
+*.tmp

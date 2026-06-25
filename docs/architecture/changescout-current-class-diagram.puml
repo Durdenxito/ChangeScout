@@ -1,5 +1,5 @@
 @startuml
-title ChangeScout - Diagrama de clases relevante actual
+title ChangeScout - Clases principales de Android
 
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
@@ -184,10 +184,6 @@ package "data.local" {
     + evaluacionComercialDao(): EvaluacionComercialDao
   }
 
-  class ChangeScoutMigrations {
-    + MIGRATION_1_2: Migration
-  }
-
   interface ProductoImportadoDao {
     + observarTodos(): Flow<List<ProductoImportadoEntity>>
     + observarPorId(productoId: Long): Flow<ProductoImportadoEntity?>
@@ -289,11 +285,6 @@ package "data.api" {
     + obtenerTasaVentaUsdPen(): CotizacionTipoCambio
   }
 
-  class ProveedorMarketplaceDemo {
-    + nombreProveedor: String
-    + buscar(query: String, limit: Int): List<PublicacionMercado>
-  }
-
   interface BackendMarketplaceApi {
     + buscarPublicaciones(query: String, country: String, limit: Int): List<BackendPublicacionDto>
   }
@@ -314,7 +305,50 @@ package "data.api" {
     + buscar(query: String, limit: Int): List<PublicacionMercado>
   }
 
-  class ProveedorFiltroNlpDemo {
+  interface BackendNlpApi {
+    + filtrarPublicaciones(request: BackendNlpRequest): BackendNlpResponse
+  }
+
+  class BackendNlpRequest {
+    + producto: BackendNlpProductoDto
+    + publicaciones: List<BackendNlpPublicacionDto>
+  }
+
+  class BackendNlpProductoDto {
+    + id: Long
+    + nombre: String
+    + queryCompetencia: String
+  }
+
+  class BackendNlpPublicacionDto {
+    + id: String
+    + title: String
+    + price: Double
+    + currency: String
+    + condition: String
+    + url: String?
+  }
+
+  class BackendNlpResponse {
+    + publicacionesValidas: List<BackendNlpPublicacionComparableDto>?
+    + cantidadDescartadas: Int?
+    + razonesDescarte: List<String>?
+    + precioPromedioRealPen: Double?
+    + competidoresValidos: Int?
+    + puntajeConfianza: Double?
+    + trazaProveedor: String?
+    + toDomain(): ResultadoFiltroNlp
+  }
+
+  class BackendNlpPublicacionComparableDto {
+    + publicacionOrigenId: String?
+    + tituloNormalizado: String?
+    + precioPen: Double?
+    + toDomain(): PublicacionComparable?
+  }
+
+  class ProveedorFiltroNlpBackend {
+    - api: BackendNlpApi
     + nombreProveedor: String
     + filtrar(publicaciones: List<PublicacionMercado>, producto: ProductoImportado): ResultadoFiltroNlp
   }
@@ -352,7 +386,6 @@ ProductoImportadoDao --> ProductoImportadoEntity
 EvaluacionComercialDao --> EvaluacionComercialEntity
 ChangeScoutDatabase --> ProductoImportadoDao
 ChangeScoutDatabase --> EvaluacionComercialDao
-ChangeScoutDatabase ..> ChangeScoutMigrations
 ProductoImportadoEntity ..> ProductoImportado
 EvaluacionComercialEntity ..> EvaluacionComercial
 
@@ -362,15 +395,21 @@ ProveedorTipoCambioApisNet --> TipoCambioCacheMemoria
 ProveedorTipoCambioApisNet ..> CotizacionTipoCambio
 ApisNetTipoCambioApi --> ApisNetTipoCambioResponse
 TipoCambioCacheMemoria --> CotizacionTipoCambio
-ProveedorMarketplaceDemo ..|> ProveedorMarketplace
-ProveedorMarketplaceDemo ..> PublicacionMercado
 ProveedorMarketplaceBackend ..|> ProveedorMarketplace
 ProveedorMarketplaceBackend --> BackendMarketplaceApi
 ProveedorMarketplaceBackend ..> PublicacionMercado
 BackendMarketplaceApi --> BackendPublicacionDto
 BackendPublicacionDto ..> PublicacionMercado
-ProveedorFiltroNlpDemo ..|> ProveedorFiltroNlp
-ProveedorFiltroNlpDemo ..> ResultadoFiltroNlp
-ProveedorFiltroNlpDemo ..> PublicacionMercado
+ProveedorFiltroNlpBackend ..|> ProveedorFiltroNlp
+ProveedorFiltroNlpBackend --> BackendNlpApi
+ProveedorFiltroNlpBackend ..> ResultadoFiltroNlp
+ProveedorFiltroNlpBackend ..> PublicacionMercado
+BackendNlpApi --> BackendNlpRequest
+BackendNlpApi --> BackendNlpResponse
+BackendNlpRequest *-- BackendNlpProductoDto
+BackendNlpRequest *-- BackendNlpPublicacionDto
+BackendNlpResponse *-- BackendNlpPublicacionComparableDto
+BackendNlpResponse ..> ResultadoFiltroNlp
+BackendNlpPublicacionComparableDto ..> PublicacionComparable
 
 @enduml

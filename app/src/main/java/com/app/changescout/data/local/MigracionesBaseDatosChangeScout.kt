@@ -3,7 +3,7 @@ package com.app.changescout.data.local
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-object ChangeScoutMigrations {
+object MigracionesBaseDatosChangeScout {
     val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(

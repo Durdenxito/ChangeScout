@@ -9,11 +9,12 @@ import com.app.changescout.data.api.apisnet.TipoCambioCacheMemoria
 import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceApi
 import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceConfig
 import com.app.changescout.data.api.marketplace.backend.ProveedorMarketplaceBackend
-import com.app.changescout.data.api.nlp.demo.ProveedorFiltroNlpDemo
+import com.app.changescout.data.api.nlp.backend.BackendNlpApi
+import com.app.changescout.data.api.nlp.backend.ProveedorFiltroNlpBackend
 import com.app.changescout.data.local.ChangeScoutDatabase
-import com.app.changescout.data.local.ChangeScoutMigrations
 import com.app.changescout.data.local.dao.ProductoImportadoDao
 import com.app.changescout.data.local.dao.EvaluacionComercialDao
+import com.app.changescout.data.local.MigracionesBaseDatosChangeScout
 import com.app.changescout.data.repository.RepositorioEvaluacionComercialRoom
 import com.app.changescout.data.repository.RepositorioProductoImportadoRoom
 import com.app.changescout.domain.repository.ProveedorFiltroNlp
@@ -80,6 +81,19 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
+    fun provideBackendNlpApi(
+        okHttpClient: OkHttpClient
+    ): BackendNlpApi {
+        return Retrofit.Builder()
+            .baseUrl(BackendMarketplaceConfig.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(BackendNlpApi::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideProveedorTipoCambio(
         api: ApisNetTipoCambioApi,
         cache: TipoCambioCacheMemoria,
@@ -98,8 +112,10 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
-    fun provideProveedorFiltroNlp(): ProveedorFiltroNlp {
-        return ProveedorFiltroNlpDemo()
+    fun provideProveedorFiltroNlp(
+        api: BackendNlpApi
+    ): ProveedorFiltroNlp {
+        return ProveedorFiltroNlpBackend(api)
     }
 
     @Provides
@@ -122,7 +138,7 @@ object ModulosChangeScout {
             ChangeScoutDatabase::class.java,
             "changescout.db"
         )
-            .addMigrations(ChangeScoutMigrations.MIGRATION_1_2)
+            .addMigrations(MigracionesBaseDatosChangeScout.MIGRATION_1_2)
             .build()
     }
 
