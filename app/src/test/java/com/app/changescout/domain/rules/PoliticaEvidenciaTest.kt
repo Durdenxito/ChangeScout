@@ -1,5 +1,6 @@
 package com.app.changescout.domain.rules
 
+import com.app.changescout.domain.model.PublicacionComparable
 import com.app.changescout.domain.model.ResultadoFiltroNlp
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -9,11 +10,12 @@ class PoliticaEvidenciaTest {
     private val politica = PoliticaEvidencia()
 
     @Test
-    fun tieneEvidenciaSuficiente_retornaTrueConPrecioCompetidoresYConfianza() {
+    fun tieneEvidenciaSuficiente_retornaTrueConPrecioCompetidoresYDispersionAceptable() {
         val resultado = resultadoFiltro(
             precioPromedioRealPen = 100.0,
             competidoresValidos = 3,
-            puntajeConfianza = 0.8
+            preciosValidos = listOf(95.0, 100.0, 105.0),
+            puntajeConfianza = 0.1
         )
 
         assertTrue(politica.tieneEvidenciaSuficiente(resultado))
@@ -24,6 +26,7 @@ class PoliticaEvidenciaTest {
         val resultado = resultadoFiltro(
             precioPromedioRealPen = null,
             competidoresValidos = 5,
+            preciosValidos = listOf(95.0, 100.0, 105.0, 110.0, 115.0),
             puntajeConfianza = 0.9
         )
 
@@ -35,6 +38,7 @@ class PoliticaEvidenciaTest {
         val resultado = resultadoFiltro(
             precioPromedioRealPen = 100.0,
             competidoresValidos = 2,
+            preciosValidos = listOf(95.0, 105.0),
             puntajeConfianza = 0.9
         )
 
@@ -42,10 +46,11 @@ class PoliticaEvidenciaTest {
     }
 
     @Test
-    fun tieneEvidenciaSuficiente_aceptaConfianzaNula() {
+    fun tieneEvidenciaSuficiente_aceptaConfianzaNulaPorqueNoEsCriterio() {
         val resultado = resultadoFiltro(
             precioPromedioRealPen = 100.0,
             competidoresValidos = 3,
+            preciosValidos = listOf(95.0, 100.0, 105.0),
             puntajeConfianza = null
         )
 
@@ -53,11 +58,12 @@ class PoliticaEvidenciaTest {
     }
 
     @Test
-    fun tieneEvidenciaSuficiente_retornaFalseConConfianzaBaja() {
+    fun tieneEvidenciaSuficiente_retornaFalseConPreciosMuyDispersos() {
         val resultado = resultadoFiltro(
-            precioPromedioRealPen = 100.0,
+            precioPromedioRealPen = 370.0,
             competidoresValidos = 3,
-            puntajeConfianza = 0.4
+            preciosValidos = listOf(100.0, 110.0, 900.0),
+            puntajeConfianza = 0.95
         )
 
         assertFalse(politica.tieneEvidenciaSuficiente(resultado))
@@ -66,10 +72,17 @@ class PoliticaEvidenciaTest {
     private fun resultadoFiltro(
         precioPromedioRealPen: Double?,
         competidoresValidos: Int,
+        preciosValidos: List<Double>,
         puntajeConfianza: Double?
     ): ResultadoFiltroNlp {
         return ResultadoFiltroNlp(
-            publicacionesValidas = emptyList(),
+            publicacionesValidas = preciosValidos.mapIndexed { index, precio ->
+                PublicacionComparable(
+                    publicacionOrigenId = "pub-$index",
+                    tituloNormalizado = "producto $index",
+                    precioPen = precio
+                )
+            },
             cantidadDescartadas = 0,
             razonesDescarte = emptyList(),
             precioPromedioRealPen = precioPromedioRealPen,

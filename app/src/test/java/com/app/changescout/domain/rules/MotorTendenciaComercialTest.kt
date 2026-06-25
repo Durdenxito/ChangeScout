@@ -99,6 +99,41 @@ class MotorTendenciaComercialTest {
         assertEquals(7, metricas.ventanaHistoricaDias)
     }
 
+    @Test
+    fun calcular_ignoraHistorialFueraDeVentanaReciente() {
+        val metricas = motor.calcular(
+            actual = evaluacionActual(precioPromedioRealPen = 90.0),
+            historial = listOf(
+                evaluacionHistorico(
+                    precioPromedioRealPen = 100.0,
+                    evaluadoEn = actualFecha.minusSeconds(10 * 24 * 60 * 60)
+                ),
+                evaluacionHistorico(
+                    precioPromedioRealPen = 1000.0,
+                    evaluadoEn = actualFecha.minusSeconds(120 * 24 * 60 * 60)
+                )
+            )
+        )
+
+        assertEquals(-10.0, metricas.erosionPrecioLocalPct ?: 0.0, 0.0001)
+        assertEquals(10, metricas.ventanaHistoricaDias)
+    }
+
+    @Test
+    fun calcular_sinHistorialReciente_retornaMetricasNulasYVentanaCero() {
+        val metricas = motor.calcular(
+            actual = evaluacionActual(),
+            historial = listOf(
+                evaluacionHistorico(evaluadoEn = actualFecha.minusSeconds(120 * 24 * 60 * 60))
+            )
+        )
+
+        assertNull(metricas.erosionPrecioLocalPct)
+        assertNull(metricas.variacionCompetidoresPct)
+        assertNull(metricas.presionCambiariaPct)
+        assertEquals(0, metricas.ventanaHistoricaDias)
+    }
+
     private fun evaluacionActual(
         productoId: Long = 1L,
         precioPromedioRealPen: Double? = 100.0,

@@ -91,6 +91,38 @@ class ClasificadorVeredictoComercialTest {
     }
 
     @Test
+    fun clasificar_degradaPorPresionCambiariaRapida() {
+        val resultado = clasificador.clasificar(
+            margenNetoPct = 25.0,
+            evidenciaSuficiente = true,
+            metricasTendencia = MetricasTendencia(
+                erosionPrecioLocalPct = null,
+                variacionCompetidoresPct = null,
+                presionCambiariaPct = 8.0,
+                ventanaHistoricaDias = 7
+            )
+        )
+
+        assertEquals(VeredictoComercial.PRECAUCION, resultado)
+    }
+
+    @Test
+    fun clasificar_noDegradaPorPresionCambiariaModeradaEnVentanaTrimestral() {
+        val resultado = clasificador.clasificar(
+            margenNetoPct = 25.0,
+            evidenciaSuficiente = true,
+            metricasTendencia = MetricasTendencia(
+                erosionPrecioLocalPct = null,
+                variacionCompetidoresPct = null,
+                presionCambiariaPct = 8.0,
+                ventanaHistoricaDias = 90
+            )
+        )
+
+        assertEquals(VeredictoComercial.SALUDABLE, resultado)
+    }
+
+    @Test
     fun clasificar_degradaHastaLiquidacionConVariasSenalesFuertes() {
         val resultado = clasificador.clasificar(
             margenNetoPct = 18.0,

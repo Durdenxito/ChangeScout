@@ -13,6 +13,7 @@ class MotorTendenciaComercial @Inject constructor() {
     ): MetricasTendencia {
         val historialValido = historial
             .filter { evaluacion -> evaluacion.esComparableCon(actual) }
+            .filter { evaluacion -> evaluacion.estaDentroDeVentanaReciente(actual) }
             .sortedByDescending { evaluacion -> evaluacion.evaluadoEn }
 
         return MetricasTendencia(
@@ -44,6 +45,13 @@ class MotorTendenciaComercial @Inject constructor() {
             estadoEvaluacion != EstadoEvaluacion.INCONCLUSO
     }
 
+    private fun EvaluacionComercial.estaDentroDeVentanaReciente(
+        actual: EvaluacionComercial
+    ): Boolean {
+        val antiguedadDias = ChronoUnit.DAYS.between(evaluadoEn, actual.evaluadoEn)
+        return antiguedadDias <= VENTANA_HISTORICA_MAXIMA_DIAS
+    }
+
     private fun calcularVariacionContraPromedio(
         actual: Double?,
         historicos: List<Double>
@@ -68,5 +76,9 @@ class MotorTendenciaComercial @Inject constructor() {
             .between(masAntiguo.evaluadoEn, actual.evaluadoEn)
             .toInt()
             .coerceAtLeast(0)
+    }
+
+    private companion object {
+        const val VENTANA_HISTORICA_MAXIMA_DIAS = 90L
     }
 }

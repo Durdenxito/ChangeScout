@@ -7,6 +7,7 @@ import com.app.changescout.domain.model.ErrorOperacion
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.Moneda
 import com.app.changescout.domain.model.ProductoImportado
+import com.app.changescout.domain.model.PublicacionComparable
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoFiltroNlp
 import com.app.changescout.domain.model.ResultadoOperacion
@@ -183,7 +184,13 @@ class EvaluarTendenciaProductoUseCaseTest {
         puntajeConfianza: Double = 0.9
     ): ResultadoFiltroNlp {
         return ResultadoFiltroNlp(
-            publicacionesValidas = emptyList(),
+            publicacionesValidas = List(competidoresValidos) { index ->
+                PublicacionComparable(
+                    publicacionOrigenId = "pub-$index",
+                    tituloNormalizado = "consola portatil $index",
+                    precioPen = 600.0
+                )
+            },
             cantidadDescartadas = 0,
             razonesDescarte = emptyList(),
             precioPromedioRealPen = 600.0,

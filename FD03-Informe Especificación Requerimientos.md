@@ -215,7 +215,7 @@ nomenclatura anterior basada en snapshots.
 | RN-03 | Costo total PEN | `CostoTotalPen = CostoTotalUsd * TipoCambioVentaUsdPen`. |
 | RN-04 | Margen neto | `MargenNetoPct = ((PrecioPromedioRealPen - CostoTotalPen) / PrecioPromedioRealPen) * 100`. |
 | RN-05 | Evaluacion inconclusa | Si el precio promedio real es nulo, cero o no hay evidencia suficiente, la evaluacion debe ser inconclusa. |
-| RN-06 | Evidencia minima | Una evaluacion requiere al menos 3 competidores validos y un puntaje de confianza aceptable cuando exista. |
+| RN-06 | Evidencia minima | Una evaluacion requiere precio promedio valido, al menos 3 competidores validos y dispersion razonable entre precios comparables. |
 | RN-07 | Erosion de precio local | Mide la variacion porcentual del precio promedio real actual frente a evaluaciones historicas comparables. |
 | RN-08 | Saturacion de mercado | Se estima por el incremento de competidores validos frente al historial reciente. |
 | RN-09 | Presion cambiaria | Mide el efecto del movimiento USD/PEN sobre el costo en soles entre evaluaciones. |

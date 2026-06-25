@@ -8,8 +8,7 @@ class ClasificadorVeredictoComercial(
     private val margenPrecaucionPct: Double = 12.0,
     private val margenAlertaPct: Double = 5.0,
     private val erosionFuertePct: Double = -12.0,
-    private val saturacionFuertePct: Double = 35.0,
-    private val presionCambiariaFuertePct: Double = 8.0
+    private val saturacionFuertePct: Double = 35.0
 ) {
     fun clasificar(
         margenNetoPct: Double?,
@@ -41,8 +40,22 @@ class ClasificadorVeredictoComercial(
         var degradaciones = 0
         if ((metricas.erosionPrecioLocalPct ?: 0.0) <= erosionFuertePct) degradaciones++
         if ((metricas.variacionCompetidoresPct ?: 0.0) >= saturacionFuertePct) degradaciones++
-        if ((metricas.presionCambiariaPct ?: 0.0) >= presionCambiariaFuertePct) degradaciones++
+        if (esPresionCambiariaFuerte(metricas)) degradaciones++
         return degradaciones
+    }
+
+    private fun esPresionCambiariaFuerte(metricas: MetricasTendencia): Boolean {
+        val presion = metricas.presionCambiariaPct ?: return false
+        return presion >= umbralPresionCambiariaFuertePct(metricas.ventanaHistoricaDias)
+    }
+
+    private fun umbralPresionCambiariaFuertePct(ventanaHistoricaDias: Int): Double {
+        return when {
+            ventanaHistoricaDias <= 14 -> 8.0
+            ventanaHistoricaDias <= 45 -> 10.0
+            ventanaHistoricaDias <= 90 -> 12.0
+            else -> 15.0
+        }
     }
 
     private fun degradar(
