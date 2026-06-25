@@ -35,4 +35,13 @@ sudo mkdir -p "$APP_DIR"
 sudo cp -a "$REPO_DIR/backend/build/install/backend/." "$APP_DIR/"
 sudo systemctl start "$SERVICE_NAME"
 
-curl -fsS http://127.0.0.1:8080/health
+for attempt in 1 2 3 4 5; do
+  if curl -fsS http://127.0.0.1:8080/health; then
+    exit 0
+  fi
+  sleep 2
+done
+
+sudo systemctl --no-pager status "$SERVICE_NAME"
+sudo journalctl -u "$SERVICE_NAME" -n 80 --no-pager
+exit 1
