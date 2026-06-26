@@ -9,6 +9,9 @@ data class EvaluacionComercial(
     val costoTotalPen: Double?,
     val tipoCambioVentaUsdPen: Double?,
     val precioPromedioRealPen: Double?,
+    val margenObjetivoPct: Double? = null,
+    val precioVentaSugeridoPen: Double? = null,
+    val brechaPrecioSugeridoMercadoPct: Double? = null,
     val competidoresValidos: Int,
     val margenNetoPct: Double?,
     val metricasTendencia: MetricasTendencia?,
@@ -16,7 +19,8 @@ data class EvaluacionComercial(
     val estadoEvaluacion: EstadoEvaluacion,
     val evaluadoEn: Instant,
     val versionAlgoritmo: String,
-    val trazaProveedor: String?
+    val trazaProveedor: String?,
+    val motivoEvidenciaInsuficiente: String? = null
 ) {
     fun esConclusivo(): Boolean {
         return estadoEvaluacion != EstadoEvaluacion.INCONCLUSO &&

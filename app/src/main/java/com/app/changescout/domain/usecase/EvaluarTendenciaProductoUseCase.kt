@@ -93,12 +93,28 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             is ResultadoOperacion.Fallo -> return resultado
         }
 
-        val evidenciaSuficiente = politicaEvidencia.tieneEvidenciaSuficiente(filtroNlp)
+        val resultadoEvidencia = politicaEvidencia.evaluar(filtroNlp)
+        val evidenciaSuficiente = resultadoEvidencia.esSuficiente
         val costoTotalUsd = calculadoraLandedCost.calcularCostoTotalUsd(producto.componentesCosto)
         val costoTotalPen = calculadoraLandedCost.calcularCostoTotalPen(
             costoTotalUsd = costoTotalUsd,
             tipoCambioVentaUsdPen = cotizacion.tasaVentaUsdPen
         )
+        // ponytail: margen fijo por ahora; hacerlo editable cuando exista una necesidad real por producto.
+        val margenObjetivoPct = MARGEN_OBJETIVO_PCT
+        val precioVentaSugeridoPen = calculadoraLandedCost.calcularPrecioVentaSugeridoPen(
+            costoTotalPen = costoTotalPen,
+            margenObjetivoPct = margenObjetivoPct
+        )
+        val brechaPrecioSugeridoMercadoPct = if (evidenciaSuficiente) {
+            filtroNlp.precioPromedioRealPen
+                ?.takeIf { precioPromedio -> precioPromedio > 0.0 }
+                ?.let { precioPromedio ->
+                    ((precioPromedio - precioVentaSugeridoPen) / precioVentaSugeridoPen) * 100.0
+                }
+        } else {
+            null
+        }
         val margenNetoPct = if (evidenciaSuficiente) {
             calculadoraLandedCost.calcularMargenNetoPct(
                 precioPromedioRealPen = requireNotNull(filtroNlp.precioPromedioRealPen),
@@ -114,8 +130,12 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             costoTotalPen = costoTotalPen,
             tipoCambioVentaUsdPen = cotizacion.tasaVentaUsdPen,
             filtroNlp = filtroNlp,
+            margenObjetivoPct = margenObjetivoPct,
+            precioVentaSugeridoPen = precioVentaSugeridoPen,
+            brechaPrecioSugeridoMercadoPct = brechaPrecioSugeridoMercadoPct,
             margenNetoPct = margenNetoPct,
-            causaObsolescencia = causaObsolescencia
+            causaObsolescencia = causaObsolescencia,
+            motivoEvidenciaInsuficiente = resultadoEvidencia.motivoInsuficiente
         )
         val historial = repositorioEvaluacion.obtenerHistorial(
             productoId = producto.id,
@@ -149,8 +169,12 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         costoTotalPen: Double,
         tipoCambioVentaUsdPen: Double,
         filtroNlp: ResultadoFiltroNlp,
+        margenObjetivoPct: Double,
+        precioVentaSugeridoPen: Double,
+        brechaPrecioSugeridoMercadoPct: Double?,
         margenNetoPct: Double?,
-        causaObsolescencia: ErrorOperacion?
+        causaObsolescencia: ErrorOperacion?,
+        motivoEvidenciaInsuficiente: String?
     ): EvaluacionComercial {
         return EvaluacionComercial(
             evaluacionId = 0L,
@@ -159,6 +183,9 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             costoTotalPen = costoTotalPen,
             tipoCambioVentaUsdPen = tipoCambioVentaUsdPen,
             precioPromedioRealPen = filtroNlp.precioPromedioRealPen,
+            margenObjetivoPct = margenObjetivoPct,
+            precioVentaSugeridoPen = precioVentaSugeridoPen,
+            brechaPrecioSugeridoMercadoPct = brechaPrecioSugeridoMercadoPct,
             competidoresValidos = filtroNlp.competidoresValidos,
             margenNetoPct = margenNetoPct,
             metricasTendencia = null,
@@ -169,7 +196,8 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             ),
             evaluadoEn = Instant.now(clock),
             versionAlgoritmo = VERSION_ALGORITMO,
-            trazaProveedor = construirTrazaProveedor(filtroNlp)
+            trazaProveedor = construirTrazaProveedor(filtroNlp),
+            motivoEvidenciaInsuficiente = motivoEvidenciaInsuficiente
         )
     }
 
@@ -198,6 +226,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
     private companion object {
         const val LIMITE_PUBLICACIONES_MERCADO = 5
         const val LIMITE_HISTORIAL_TENDENCIA = 12
+        const val MARGEN_OBJETIVO_PCT = 20.0
         const val VERSION_ALGORITMO = "trend-v1"
     }
 }

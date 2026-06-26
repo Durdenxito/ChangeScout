@@ -33,6 +33,9 @@ data class EvaluacionComercialEntity(
     val costoTotalPen: Double?,
     val tipoCambioVentaUsdPen: Double?,
     val precioPromedioRealPen: Double?,
+    val margenObjetivoPct: Double?,
+    val precioVentaSugeridoPen: Double?,
+    val brechaPrecioSugeridoMercadoPct: Double?,
     val competidoresValidos: Int,
     val margenNetoPct: Double?,
     val erosionPrecioLocalPct: Double?,
@@ -43,7 +46,8 @@ data class EvaluacionComercialEntity(
     val estadoEvaluacion: String,
     val evaluadoEnEpochMillis: Long,
     val versionAlgoritmo: String,
-    val trazaProveedor: String?
+    val trazaProveedor: String?,
+    val motivoEvidenciaInsuficiente: String?
 ) {
     fun toDomain(): EvaluacionComercial {
         return EvaluacionComercial(
@@ -53,6 +57,9 @@ data class EvaluacionComercialEntity(
             costoTotalPen = costoTotalPen,
             tipoCambioVentaUsdPen = tipoCambioVentaUsdPen,
             precioPromedioRealPen = precioPromedioRealPen,
+            margenObjetivoPct = margenObjetivoPct,
+            precioVentaSugeridoPen = precioVentaSugeridoPen,
+            brechaPrecioSugeridoMercadoPct = brechaPrecioSugeridoMercadoPct,
             competidoresValidos = competidoresValidos,
             margenNetoPct = margenNetoPct,
             metricasTendencia = toMetricasTendencia(),
@@ -61,7 +68,8 @@ data class EvaluacionComercialEntity(
                 ?: EstadoEvaluacion.FALLIDO,
             evaluadoEn = Instant.ofEpochMilli(evaluadoEnEpochMillis),
             versionAlgoritmo = versionAlgoritmo,
-            trazaProveedor = trazaProveedor
+            trazaProveedor = trazaProveedor,
+            motivoEvidenciaInsuficiente = motivoEvidenciaInsuficiente
         )
     }
 
@@ -92,6 +100,9 @@ data class EvaluacionComercialEntity(
                 costoTotalPen = evaluacion.costoTotalPen,
                 tipoCambioVentaUsdPen = evaluacion.tipoCambioVentaUsdPen,
                 precioPromedioRealPen = evaluacion.precioPromedioRealPen,
+                margenObjetivoPct = evaluacion.margenObjetivoPct,
+                precioVentaSugeridoPen = evaluacion.precioVentaSugeridoPen,
+                brechaPrecioSugeridoMercadoPct = evaluacion.brechaPrecioSugeridoMercadoPct,
                 competidoresValidos = evaluacion.competidoresValidos,
                 margenNetoPct = evaluacion.margenNetoPct,
                 erosionPrecioLocalPct = evaluacion.metricasTendencia?.erosionPrecioLocalPct,
@@ -102,7 +113,8 @@ data class EvaluacionComercialEntity(
                 estadoEvaluacion = evaluacion.estadoEvaluacion.name,
                 evaluadoEnEpochMillis = evaluacion.evaluadoEn.toEpochMilli(),
                 versionAlgoritmo = evaluacion.versionAlgoritmo,
-                trazaProveedor = evaluacion.trazaProveedor
+                trazaProveedor = evaluacion.trazaProveedor,
+                motivoEvidenciaInsuficiente = evaluacion.motivoEvidenciaInsuficiente
             )
         }
     }

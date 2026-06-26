@@ -8,6 +8,10 @@ class PoliticaEvidencia(
     private val coeficienteVariacionMaximo: Double = 0.60
 ) {
     fun tieneEvidenciaSuficiente(resultado: ResultadoFiltroNlp): Boolean {
+        return evaluar(resultado).esSuficiente
+    }
+
+    fun evaluar(resultado: ResultadoFiltroNlp): ResultadoPoliticaEvidencia {
         val tienePrecio = resultado.precioPromedioRealPen != null &&
             resultado.precioPromedioRealPen > 0.0
         val preciosValidos = resultado.publicacionesValidas
@@ -16,8 +20,23 @@ class PoliticaEvidencia(
         val tieneCompetidores = resultado.competidoresValidos >= minimoCompetidoresValidos &&
             preciosValidos.size >= minimoCompetidoresValidos
         val tieneDispersionAceptable = tieneDispersionAceptable(preciosValidos)
+        val competidoresComparables = minOf(resultado.competidoresValidos, preciosValidos.size)
 
-        return tienePrecio && tieneCompetidores && tieneDispersionAceptable
+        return when {
+            !tienePrecio -> ResultadoPoliticaEvidencia(
+                esSuficiente = false,
+                motivoInsuficiente = "No se pudo estimar un precio promedio confiable en soles."
+            )
+            !tieneCompetidores -> ResultadoPoliticaEvidencia(
+                esSuficiente = false,
+                motivoInsuficiente = "Solo se encontraron $competidoresComparables competidores comparables; se necesitan al menos $minimoCompetidoresValidos."
+            )
+            !tieneDispersionAceptable -> ResultadoPoliticaEvidencia(
+                esSuficiente = false,
+                motivoInsuficiente = "Los precios encontrados estan demasiado dispersos para calcular un margen confiable."
+            )
+            else -> ResultadoPoliticaEvidencia(esSuficiente = true)
+        }
     }
 
     private fun tieneDispersionAceptable(precios: List<Double>): Boolean {
@@ -35,3 +54,8 @@ class PoliticaEvidencia(
         return coeficienteVariacion <= coeficienteVariacionMaximo
     }
 }
+
+data class ResultadoPoliticaEvidencia(
+    val esSuficiente: Boolean,
+    val motivoInsuficiente: String? = null
+)

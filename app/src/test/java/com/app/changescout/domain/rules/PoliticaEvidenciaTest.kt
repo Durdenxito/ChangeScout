@@ -2,6 +2,7 @@ package com.app.changescout.domain.rules
 
 import com.app.changescout.domain.model.PublicacionComparable
 import com.app.changescout.domain.model.ResultadoFiltroNlp
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -43,6 +44,10 @@ class PoliticaEvidenciaTest {
         )
 
         assertFalse(politica.tieneEvidenciaSuficiente(resultado))
+        assertEquals(
+            "Solo se encontraron 2 competidores comparables; se necesitan al menos 3.",
+            politica.evaluar(resultado).motivoInsuficiente
+        )
     }
 
     @Test

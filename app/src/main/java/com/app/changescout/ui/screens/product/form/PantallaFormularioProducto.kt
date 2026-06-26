@@ -3,12 +3,11 @@ package com.app.changescout.ui.screens.product.form
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,11 +18,9 @@ import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -31,7 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -44,14 +40,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.changescout.ui.screens.components.ChipOperativo
+import com.app.changescout.ui.screens.components.BotonPrimario
+import com.app.changescout.ui.screens.components.BotonSecundario
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
-import com.app.changescout.ui.screens.components.FondoOperativoPremium
-import com.app.changescout.ui.screens.components.MetricaResumida
-import com.app.changescout.ui.screens.components.TarjetaPremium
+import com.app.changescout.ui.screens.components.FondoOperativo
+import com.app.changescout.ui.screens.components.TarjetaOperativa
 import com.app.changescout.ui.viewmodel.EfectoFormularioProducto
 import com.app.changescout.ui.viewmodel.EstadoUiFormularioProducto
 import com.app.changescout.ui.viewmodel.EventoFormularioProducto
+import com.app.changescout.ui.viewmodel.PublicacionPreviewUi
 import com.app.changescout.ui.viewmodel.ViewModelFormularioProducto
 
 @Composable
@@ -73,7 +70,7 @@ fun PantallaFormularioProducto(
         }
     }
 
-    FondoOperativoPremium {
+    FondoOperativo {
         ContenidoFormularioProducto(
             state = state,
             snackbarHostState = snackbarHostState,
@@ -99,21 +96,19 @@ private fun ContenidoFormularioProducto(
                 ),
                 title = {
                     Column {
-                        Text("Alta de producto")
+                        Text("Nuevo producto")
                         Text(
-                            text = "Ficha base para seguimiento financiero",
+                            text = "Costos y mercado comparable",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 navigationIcon = {
-                    TextButton(onClick = {
+                    IconButton(onClick = {
                         onEvent(EventoFormularioProducto.RegresarDesdeFormularioSolicitado)
                     }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Volver")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -127,44 +122,19 @@ private fun ContenidoFormularioProducto(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            TarjetaPremium {
-                Text(
-                    text = "Abre una nueva ficha y deja lista la base comercial del producto: nombre, costos, stock y una referencia de mercado.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    MetricaResumida(
-                        titulo = "Modo",
-                        valor = "Operativo",
-                        icono = Icons.Outlined.Tune,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricaResumida(
-                        titulo = "Guardado",
-                        valor = if (state.estaGuardando) "En curso" else "Manual",
-                        icono = Icons.Outlined.Save,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            TarjetaPremium {
+            TarjetaOperativa {
                 EncabezadoSeccion(
                     icono = Icons.Outlined.Description,
-                    titulo = "Ficha principal",
-                    subtitulo = "Usa un nombre y una referencia faciles de reconocer en el mercado."
+                    titulo = "Datos y costos",
+                    subtitulo = "El precio en origen es obligatorio; los demas cargos pueden quedar vacios."
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.nombre,
                     onValueChange = { onEvent(EventoFormularioProducto.NombreCambiado(it)) },
                     label = "Nombre del producto",
                     leadingIcon = { Icon(Icons.Outlined.Inventory2, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.precioFobUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.PrecioFobUsdCambiado(it)) },
                     label = "Precio del producto en origen (USD)",
@@ -172,57 +142,72 @@ private fun ContenidoFormularioProducto(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.fleteUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.FleteUsdCambiado(it)) },
                     label = "Envio internacional (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.seguroUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.SeguroUsdCambiado(it)) },
                     label = "Seguro de carga (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.arancelesUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.ArancelesUsdCambiado(it)) },
                     label = "Impuestos de importacion (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.otrosCargosUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.OtrosCargosUsdCambiado(it)) },
                     label = "Gastos adicionales (USD, opcional)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
-                CampoPremium(
+                CampoOperativo(
                     value = state.cantidadDisponible,
                     onValueChange = { onEvent(EventoFormularioProducto.CantidadDisponibleCambiada(it)) },
                     label = "Unidades disponibles",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     leadingIcon = { Icon(Icons.Outlined.Numbers, contentDescription = null) }
                 )
-                CampoPremium(
+            }
+
+            TarjetaOperativa {
+                EncabezadoSeccion(
+                    icono = Icons.Outlined.Search,
+                    titulo = "Busqueda comparable",
+                    subtitulo = "Usa el nombre que escribirias en MercadoLibre para encontrar el mismo producto."
+                )
+                CampoOperativo(
                     value = state.queryCompetencia,
                     onValueChange = { onEvent(EventoFormularioProducto.QueryCompetenciaCambiado(it)) },
                     label = "Producto a buscar en el mercado",
-                    supportingText = "Ejemplo: consola portatil retro, audifonos bluetooth.",
                     minLines = 3,
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
                 )
-                ChipOperativo(
-                    texto = "El borrador se conserva mientras sigas dentro de la sesion actual.",
-                    icono = Icons.Outlined.Tune
+                BotonSecundario(
+                    texto = if (state.estaPrevisualizando) "Buscando..." else "Probar busqueda",
+                    icono = Icons.Outlined.Search,
+                    onClick = { onEvent(EventoFormularioProducto.PrevisualizarCompetenciaSolicitada) },
+                    enabled = state.puedePrevisualizar,
+                    modifier = Modifier.fillMaxWidth(),
+                    cargando = state.estaPrevisualizando
+                )
+                PreviewCompetencia(
+                    publicaciones = state.previewCompetencia,
+                    mensaje = state.mensajePreview
                 )
             }
 
             state.mensajeValidacion?.let { mensaje ->
-                TarjetaPremium {
+                TarjetaOperativa {
                     Text(
                         text = mensaje,
                         style = MaterialTheme.typography.bodyMedium,
@@ -232,28 +217,62 @@ private fun ContenidoFormularioProducto(
                 }
             }
 
-            Button(
+            BotonPrimario(
+                texto = if (state.estaGuardando) "Guardando ficha..." else "Guardar ficha",
+                icono = Icons.Outlined.Save,
                 onClick = {
                     onEvent(EventoFormularioProducto.GuardarProductoSolicitado)
                 },
                 enabled = state.puedeEnviar,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
+                cargando = state.estaGuardando
+            )
+        }
+    }
+}
+
+@Composable
+private fun PreviewCompetencia(
+    publicaciones: List<PublicacionPreviewUi>,
+    mensaje: String?
+) {
+    if (mensaje == null && publicaciones.isEmpty()) return
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        mensaje?.let { texto ->
+            Text(
+                text = texto,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        publicaciones.forEach { publicacion ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Outlined.Save, contentDescription = null)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(if (state.estaGuardando) "Guardando ficha..." else "Guardar ficha")
+                Text(
+                    text = publicacion.titulo,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = publicacion.precio,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CampoPremium(
+private fun CampoOperativo(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
@@ -275,6 +294,7 @@ private fun CampoPremium(
         minLines = minLines,
         singleLine = minLines == 1,
         keyboardOptions = keyboardOptions,
+        shape = RoundedCornerShape(8.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             focusedLabelColor = MaterialTheme.colorScheme.primary,

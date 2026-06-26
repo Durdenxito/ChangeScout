@@ -1,6 +1,5 @@
 package com.app.changescout.ui.screens.radar
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,9 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Info
@@ -22,13 +21,10 @@ import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Warehouse
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -41,21 +37,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
+import com.app.changescout.ui.screens.components.BotonSecundario
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
-import com.app.changescout.ui.screens.components.FondoOperativoPremium
+import com.app.changescout.ui.screens.components.FondoOperativo
 import com.app.changescout.ui.screens.components.MetricaResumida
-import com.app.changescout.ui.screens.components.TarjetaPremium
-import com.app.changescout.ui.theme.BullionGold
+import com.app.changescout.ui.screens.components.TarjetaOperativa
 import com.app.changescout.ui.theme.ErrorSoft
 import com.app.changescout.ui.theme.SignalGold
+import com.app.changescout.ui.theme.SignalMint
 import com.app.changescout.ui.theme.SuccessContainer
 import com.app.changescout.ui.viewmodel.EfectoRadarProductos
 import com.app.changescout.ui.viewmodel.EstadoUiRadarProductos
@@ -84,7 +80,7 @@ fun PantallaRadarProductos(
         }
     }
 
-    FondoOperativoPremium {
+    FondoOperativo {
         ContenidoRadarProductos(
             state = state,
             snackbarHostState = snackbarHostState,
@@ -125,7 +121,7 @@ private fun ContenidoRadarProductos(
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = "Mesa de control comercial",
+                            text = "Costo, margen y mercado",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -134,9 +130,12 @@ private fun ContenidoRadarProductos(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onNuevoProducto) {
-                Icon(Icons.Outlined.Add, contentDescription = "Nuevo producto")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onNuevoProducto,
+                shape = RoundedCornerShape(14.dp),
+                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                text = { Text("Nuevo producto") }
+            )
         }
     ) { innerPadding ->
         LazyColumn(
@@ -147,29 +146,30 @@ private fun ContenidoRadarProductos(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                HeroOperativo(
+                ResumenRadar(
                     cantidadProductos = state.productos.size,
+                    cantidadPendiente = state.productos.count { it.estadoEvaluacion == null },
                     onConsultarContexto = onConsultarContexto
                 )
             }
 
             if (state.estaCargando) {
                 item {
-                    TarjetaPremium {
+                    TarjetaOperativa {
                         EncabezadoSeccion(
                             icono = Icons.Outlined.Schedule,
-                            titulo = "Cargando panel",
-                            subtitulo = "Organizando las fichas para una lectura mas clara."
+                            titulo = "Cargando productos",
+                            subtitulo = "Leyendo las fichas guardadas en el dispositivo."
                         )
                     }
                 }
             } else if (state.productos.isEmpty()) {
                 item {
-                    TarjetaPremium {
+                    TarjetaOperativa {
                         EncabezadoSeccion(
                             icono = Icons.Outlined.Inventory2,
-                            titulo = "Radar vacio",
-                            subtitulo = "Empieza agregando el primer producto para abrir la mesa de seguimiento."
+                            titulo = "Sin productos",
+                            subtitulo = "Agrega una ficha para calcular costo, margen y mercado comparable."
                         )
                     }
                 }
@@ -186,23 +186,18 @@ private fun ContenidoRadarProductos(
 }
 
 @Composable
-private fun HeroOperativo(
+private fun ResumenRadar(
     cantidadProductos: Int,
+    cantidadPendiente: Int,
     onConsultarContexto: () -> Unit
 ) {
-    TarjetaPremium(
-        acento = BullionGold
+    TarjetaOperativa(
+        acento = MaterialTheme.colorScheme.primary
     ) {
-        Text(
-            text = "Mesa de control reservado",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = "Supervisa productos importados, conserva fichas listas para lectura y manten a la vista los margenes que mas importan.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        EncabezadoSeccion(
+            icono = Icons.Outlined.QueryStats,
+            titulo = "Antes de reponer stock",
+            subtitulo = "Revisa que productos siguen dando margen y cuales piden atencion."
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -215,20 +210,18 @@ private fun HeroOperativo(
                 modifier = Modifier.weight(1f)
             )
             MetricaResumida(
-                titulo = "Vista",
-                valor = "Activa",
-                icono = Icons.Outlined.QueryStats,
+                titulo = "Pendientes",
+                valor = cantidadPendiente.toString(),
+                icono = Icons.Outlined.Schedule,
                 modifier = Modifier.weight(1f)
             )
         }
-        OutlinedButton(
+        BotonSecundario(
+            texto = "Ver criterio de lectura",
+            icono = Icons.Outlined.Info,
             onClick = onConsultarContexto,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Icon(Icons.Outlined.Info, contentDescription = null)
-            Spacer(modifier = Modifier.width(10.dp))
-            Text("Contexto operativo")
-        }
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -237,7 +230,7 @@ private fun TarjetaProductoRadar(
     producto: TarjetaProductoRadarUiModel,
     onClick: () -> Unit
 ) {
-    TarjetaPremium(
+    TarjetaOperativa(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
@@ -267,7 +260,7 @@ private fun TarjetaProductoRadar(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Ficha base lista para seguimiento.",
+                    text = "Stock local y ultima lectura comercial.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -280,7 +273,7 @@ private fun TarjetaProductoRadar(
                     contenedor = veredicto.colorContenedor()
                 )
             } ?: ChipOperativo(
-                texto = "Sin lectura",
+                texto = "Pendiente",
                 icono = Icons.Outlined.Schedule,
                 contenedor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -304,9 +297,9 @@ private fun TarjetaProductoRadar(
             )
         }
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             ChipOperativo(
                 texto = producto.estadoEvaluacion?.aTextoPresentable() ?: "Pendiente",
@@ -315,7 +308,7 @@ private fun TarjetaProductoRadar(
             )
             producto.evaluadoEn?.let {
                 ChipOperativo(
-                    texto = "Registro reciente",
+                    texto = it,
                     icono = Icons.Outlined.QueryStats,
                     contenedor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
                 )
@@ -326,10 +319,10 @@ private fun TarjetaProductoRadar(
 
 private fun EstadoEvaluacion.aTextoPresentable(): String {
     return when (this) {
-        EstadoEvaluacion.VIGENTE -> "Vigente"
-        EstadoEvaluacion.OBSOLETO -> "Obsoleto"
-        EstadoEvaluacion.INCONCLUSO -> "Inconcluso"
-        EstadoEvaluacion.FALLIDO -> "Pendiente"
+        EstadoEvaluacion.VIGENTE -> "Evaluado recientemente"
+        EstadoEvaluacion.OBSOLETO -> "Informacion desactualizada"
+        EstadoEvaluacion.INCONCLUSO -> "Sin datos suficientes"
+        EstadoEvaluacion.FALLIDO -> "Lectura pendiente"
     }
 }
 
@@ -337,9 +330,9 @@ private fun VeredictoComercial.etiqueta(): String {
     return when (this) {
         VeredictoComercial.SALUDABLE -> "Saludable"
         VeredictoComercial.PRECAUCION -> "Precaucion"
-        VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Alerta"
-        VeredictoComercial.LIQUIDACION -> "Liquidacion"
-        VeredictoComercial.INCONCLUSO -> "Inconcluso"
+        VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Margen en riesgo"
+        VeredictoComercial.LIQUIDACION -> "Liquidar stock"
+        VeredictoComercial.INCONCLUSO -> "Sin datos"
     }
 }
 
@@ -354,10 +347,10 @@ private fun VeredictoComercial.colorContenedor() = when (this) {
 
 @Composable
 private fun VeredictoComercial?.colorAcento() = when (this) {
-    VeredictoComercial.SALUDABLE -> MaterialTheme.colorScheme.tertiary
+    VeredictoComercial.SALUDABLE -> SignalMint
     VeredictoComercial.PRECAUCION -> SignalGold
     VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> MaterialTheme.colorScheme.error
     VeredictoComercial.LIQUIDACION -> MaterialTheme.colorScheme.error
-    VeredictoComercial.INCONCLUSO -> BullionGold
-    null -> BullionGold
+    VeredictoComercial.INCONCLUSO -> MaterialTheme.colorScheme.primary
+    null -> MaterialTheme.colorScheme.primary
 }

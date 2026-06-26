@@ -117,7 +117,11 @@ object ModulosChangeScout {
             ChangeScoutDatabase::class.java,
             "changescout.db"
         )
-            .addMigrations(MigracionesBaseDatosChangeScout.MIGRATION_1_2)
+            .addMigrations(
+                MigracionesBaseDatosChangeScout.MIGRATION_1_2,
+                MigracionesBaseDatosChangeScout.MIGRATION_2_3,
+                MigracionesBaseDatosChangeScout.MIGRATION_3_4
+            )
             .build()
     }
 

@@ -67,7 +67,7 @@ class ViewModelRadarProductos @Inject constructor(
                                 margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
                                 veredicto = item.ultimaEvaluacion?.veredicto,
                                 estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
-                                evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.toString()
+                                evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.aTextoRelativo()
                             )
                         },
                         estaCargando = false,
@@ -98,5 +98,15 @@ class ViewModelRadarProductos @Inject constructor(
                 }
             }
         }
+    }
+}
+
+private fun java.time.Instant.aTextoRelativo(): String {
+    val segundos = ((System.currentTimeMillis() - toEpochMilli()) / 1000).coerceAtLeast(0)
+    return when {
+        segundos < 60 -> "Evaluado hace menos de un minuto"
+        segundos < 3_600 -> "Evaluado hace ${segundos / 60} min"
+        segundos < 86_400 -> "Evaluado hace ${segundos / 3_600} h"
+        else -> "Evaluado hace ${segundos / 86_400} dias"
     }
 }

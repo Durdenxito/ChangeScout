@@ -56,14 +56,21 @@ class LlmNlpMapperTest {
             publicacion("4", "Audifonos USD", 20.0, currency = "USD")
         )
 
-        val response = decision.toFiltroResponse(publicaciones, proveedor = "Groq")
+        val response = decision.toFiltroResponse(
+            publicaciones = publicaciones,
+            proveedor = "Groq",
+            trazaExtra = "modelo=qwen-test | prompt=nlp-filter-v1:abc123"
+        )
 
         assertEquals(2, response.competidoresValidos)
         assertEquals(2, response.cantidadDescartadas)
         assertEquals(104.0, response.precioPromedioRealPen ?: 0.0, 0.0001)
         assertEquals(1.0, response.puntajeConfianza, 0.0)
         assertEquals("audifonos xiaomi", response.publicacionesValidas.first().tituloNormalizado)
-        assertEquals("proveedor=Groq | total=4 | validas=2", response.trazaProveedor)
+        assertEquals(
+            "proveedor=Groq | modelo=qwen-test | prompt=nlp-filter-v1:abc123 | total=4 | validas=2",
+            response.trazaProveedor
+        )
     }
 
     private fun publicacion(

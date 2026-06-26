@@ -37,4 +37,16 @@ class CalculadoraLandedCost @Inject constructor() {
 
         return ((precioPromedioRealPen - costoTotalPen) / precioPromedioRealPen) * 100.0
     }
+
+    fun calcularPrecioVentaSugeridoPen(
+        costoTotalPen: Double,
+        margenObjetivoPct: Double
+    ): Double {
+        require(costoTotalPen > 0.0) { "El costo total PEN debe ser mayor a cero." }
+        require(margenObjetivoPct > 0.0 && margenObjetivoPct < 100.0) {
+            "El margen objetivo debe estar entre 0 y 100."
+        }
+
+        return costoTotalPen / (1.0 - margenObjetivoPct / 100.0)
+    }
 }

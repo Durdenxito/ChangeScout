@@ -5,6 +5,7 @@ import com.app.changescout.domain.model.MetricasTendencia
 import com.app.changescout.domain.model.EvaluacionComercial
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import kotlin.math.pow
 
 class MotorTendenciaComercial @Inject constructor() {
     fun calcular(
@@ -17,17 +18,23 @@ class MotorTendenciaComercial @Inject constructor() {
             .sortedByDescending { evaluacion -> evaluacion.evaluadoEn }
 
         return MetricasTendencia(
-            erosionPrecioLocalPct = calcularVariacionContraPromedio(
+            erosionPrecioLocalPct = calcularVariacionContraPromedioPonderado(
                 actual = actual.precioPromedioRealPen,
-                historicos = historialValido.mapNotNull { it.precioPromedioRealPen }
+                evaluacionActual = actual,
+                historial = historialValido,
+                valorHistorico = { evaluacion -> evaluacion.precioPromedioRealPen }
             ),
-            variacionCompetidoresPct = calcularVariacionContraPromedio(
+            variacionCompetidoresPct = calcularVariacionContraPromedioPonderado(
                 actual = actual.competidoresValidos.toDouble(),
-                historicos = historialValido.map { it.competidoresValidos.toDouble() }
+                evaluacionActual = actual,
+                historial = historialValido,
+                valorHistorico = { evaluacion -> evaluacion.competidoresValidos.toDouble() }
             ),
-            presionCambiariaPct = calcularVariacionContraPromedio(
+            presionCambiariaPct = calcularVariacionContraPromedioPonderado(
                 actual = actual.tipoCambioVentaUsdPen,
-                historicos = historialValido.mapNotNull { it.tipoCambioVentaUsdPen }
+                evaluacionActual = actual,
+                historial = historialValido,
+                valorHistorico = { evaluacion -> evaluacion.tipoCambioVentaUsdPen }
             ),
             ventanaHistoricaDias = calcularVentanaHistoricaDias(
                 actual = actual,
@@ -52,16 +59,31 @@ class MotorTendenciaComercial @Inject constructor() {
         return antiguedadDias <= VENTANA_HISTORICA_MAXIMA_DIAS
     }
 
-    private fun calcularVariacionContraPromedio(
+    private fun calcularVariacionContraPromedioPonderado(
         actual: Double?,
-        historicos: List<Double>
+        evaluacionActual: EvaluacionComercial,
+        historial: List<EvaluacionComercial>,
+        valorHistorico: (EvaluacionComercial) -> Double?
     ): Double? {
         if (actual == null || actual < 0.0) return null
 
-        val valoresHistoricos = historicos.filter { it > 0.0 }
+        val valoresHistoricos = historial
+            .mapNotNull { evaluacion ->
+                val valor = valorHistorico(evaluacion)?.takeIf { it > 0.0 } ?: return@mapNotNull null
+                val antiguedadDias = ChronoUnit.DAYS
+                    .between(evaluacion.evaluadoEn, evaluacionActual.evaluadoEn)
+                    .coerceAtLeast(0)
+                ValorHistoricoPonderado(
+                    valor = valor,
+                    peso = 0.5.pow(antiguedadDias.toDouble() / VIDA_MEDIA_PONDERACION_DIAS)
+                )
+            }
         if (valoresHistoricos.isEmpty()) return null
 
-        val promedioHistorico = valoresHistoricos.average()
+        val pesoTotal = valoresHistoricos.sumOf { it.peso }
+        if (pesoTotal <= 0.0) return null
+
+        val promedioHistorico = valoresHistoricos.sumOf { it.valor * it.peso } / pesoTotal
         if (promedioHistorico <= 0.0) return null
 
         return ((actual - promedioHistorico) / promedioHistorico) * 100.0
@@ -80,5 +102,11 @@ class MotorTendenciaComercial @Inject constructor() {
 
     private companion object {
         const val VENTANA_HISTORICA_MAXIMA_DIAS = 90L
+        const val VIDA_MEDIA_PONDERACION_DIAS = 30.0
     }
 }
+
+private data class ValorHistoricoPonderado(
+    val valor: Double,
+    val peso: Double
+)

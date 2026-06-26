@@ -3,12 +3,9 @@ package com.app.changescout.ui.screens.product.detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,17 +18,14 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -45,12 +39,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.EvaluacionComercial
+import com.app.changescout.domain.model.MetricasTendencia
 import com.app.changescout.domain.model.VeredictoComercial
+import com.app.changescout.ui.screens.components.BotonPrimario
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
-import com.app.changescout.ui.screens.components.FondoOperativoPremium
+import com.app.changescout.ui.screens.components.FondoOperativo
 import com.app.changescout.ui.screens.components.MetricaResumida
-import com.app.changescout.ui.screens.components.TarjetaPremium
+import com.app.changescout.ui.screens.components.TarjetaOperativa
 import com.app.changescout.ui.theme.ErrorSoft
 import com.app.changescout.ui.theme.SignalGold
 import com.app.changescout.ui.theme.SuccessContainer
@@ -58,6 +54,7 @@ import com.app.changescout.ui.viewmodel.EfectoDetalleProducto
 import com.app.changescout.ui.viewmodel.EstadoUiDetalleProducto
 import com.app.changescout.ui.viewmodel.EventoDetalleProducto
 import com.app.changescout.ui.viewmodel.ViewModelDetalleProducto
+import kotlin.math.absoluteValue
 
 @Composable
 fun PantallaDetalleProducto(
@@ -78,7 +75,7 @@ fun PantallaDetalleProducto(
         }
     }
 
-    FondoOperativoPremium {
+    FondoOperativo {
         ContenidoDetalleProducto(
             state = state,
             snackbarHostState = snackbarHostState,
@@ -104,21 +101,19 @@ private fun ContenidoDetalleProducto(
                 ),
                 title = {
                     Column {
-                        Text("Ficha de seguimiento")
+                        Text("Producto")
                         Text(
-                            text = "Detalle operativo del producto",
+                            text = "Costo, precio y riesgo comercial",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 navigationIcon = {
-                    TextButton(onClick = {
+                    IconButton(onClick = {
                         onEvent(EventoDetalleProducto.RegresarDesdeDetalleSolicitado)
                     }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Volver")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
@@ -133,22 +128,22 @@ private fun ContenidoDetalleProducto(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (state.estaCargando) {
-                TarjetaPremium {
+                TarjetaOperativa {
                     EncabezadoSeccion(
                         icono = Icons.Outlined.Schedule,
-                        titulo = "Cargando ficha",
-                        subtitulo = "Un momento mientras organizamos la informacion del producto."
+                        titulo = "Cargando producto",
+                        subtitulo = "Leyendo la ficha guardada en el dispositivo."
                     )
                 }
                 return@Column
             }
 
             state.producto?.let { producto ->
-                TarjetaPremium {
+                TarjetaOperativa {
                     EncabezadoSeccion(
                         icono = Icons.Outlined.Inventory2,
                         titulo = producto.nombre,
-                        subtitulo = "Producto cargado para seguimiento"
+                        subtitulo = "Costos base, stock y busqueda comparable."
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -175,11 +170,11 @@ private fun ContenidoDetalleProducto(
                 }
             }
 
-            TarjetaPremium {
+            TarjetaOperativa {
                 EncabezadoSeccion(
                     icono = Icons.Outlined.QueryStats,
-                    titulo = "Lectura de referencia",
-                    subtitulo = "Resumen operativo del comportamiento comercial del producto."
+                    titulo = "Resultado comercial",
+                    subtitulo = "Margen, precio sugerido y presion del mercado."
                 )
 
                 if (state.evaluacion == null) {
@@ -189,7 +184,7 @@ private fun ContenidoDetalleProducto(
                         contenedor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Text(
-                        text = "Cuando exista una lectura disponible, aqui veras margen estimado, nivel de riesgo y estado actual del seguimiento.",
+                        text = "Actualiza la ficha para comparar costo en destino contra precios reales del mercado.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -206,33 +201,20 @@ private fun ContenidoDetalleProducto(
                     )
                 }
 
-                Button(
+                BotonPrimario(
+                    texto = if (state.estaEvaluando) "Consultando..." else "Actualizar lectura",
+                    icono = Icons.Outlined.QueryStats,
                     onClick = {
                         onEvent(EventoDetalleProducto.EvaluarProductoActualSolicitado)
                     },
                     enabled = !state.estaEvaluando && state.producto != null,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    if (state.estaEvaluando) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(Icons.Outlined.QueryStats, contentDescription = null)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(if (state.estaEvaluando) "Consultando..." else "Solicitar lectura")
-                }
+                    cargando = state.estaEvaluando
+                )
             }
 
             state.mensajeError?.let { mensaje ->
-                TarjetaPremium {
+                TarjetaOperativa {
                     ChipOperativo(
                         texto = "Revision requerida",
                         icono = Icons.Outlined.WarningAmber,
@@ -252,6 +234,27 @@ private fun ContenidoDetalleProducto(
 
 @Composable
 private fun EvaluacionComercial.evaluacionResumen() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ChipOperativo(
+            texto = veredicto?.etiqueta() ?: "Sin clasificar",
+            icono = Icons.Outlined.Sell,
+            contenedor = veredicto.colorContenedor()
+        )
+        Text(
+            text = veredicto.descripcionUsuario(motivoEvidenciaInsuficiente),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ChipOperativo(
+            texto = estadoEvaluacion.aTextoPresentable(),
+            icono = Icons.Outlined.Schedule,
+            contenedor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -275,6 +278,24 @@ private fun EvaluacionComercial.evaluacionResumen() {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         MetricaResumida(
+            titulo = "Precio sugerido",
+            valor = precioVentaSugeridoPen?.let { "S/ ${"%.2f".format(it)}" } ?: "--",
+            icono = Icons.Outlined.Sell,
+            modifier = Modifier.weight(1f)
+        )
+        MetricaResumida(
+            titulo = "Margen objetivo",
+            valor = margenObjetivoPct?.let { "${"%.0f".format(it)}%" } ?: "--",
+            icono = Icons.Outlined.QueryStats,
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        MetricaResumida(
             titulo = "Margen",
             valor = margenNetoPct?.let { "${"%.1f".format(it)}%" } ?: "--",
             icono = Icons.Outlined.Sell,
@@ -288,19 +309,19 @@ private fun EvaluacionComercial.evaluacionResumen() {
         )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        ChipOperativo(
-            texto = veredicto?.etiqueta() ?: "Sin clasificar",
-            icono = Icons.Outlined.Sell,
-            contenedor = veredicto.colorContenedor()
+    if (precioVentaSugeridoPen != null) {
+        Text(
+            text = descripcionPrecioSugerido(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ChipOperativo(
-            texto = estadoEvaluacion.aTextoPresentable(),
-            icono = Icons.Outlined.Schedule,
-            contenedor = MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    if (estadoEvaluacion == EstadoEvaluacion.OBSOLETO) {
+        Text(
+            text = "Esta lectura tiene mas de 12 horas. Actualiza para revisar el mercado de hoy.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
         )
     }
 
@@ -312,21 +333,83 @@ private fun EvaluacionComercial.evaluacionResumen() {
         )
     }
 
+    metricasTendencia?.let { metricas ->
+        TendenciasComerciales(metricas)
+    }
+
     Text(
-        text = "Evaluado: $evaluadoEn",
+        text = "Evaluado ${evaluadoEn.aTextoRelativo()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+@Composable
+private fun TendenciasComerciales(metricas: MetricasTendencia) {
+    val lecturas = listOfNotNull(
+        metricas.erosionPrecioLocalPct?.let { valor ->
+            "Los precios comparables ${valor.verboCambioPrecio()} ${valor.formatearAbs()} frente a tus lecturas recientes. ${valor.impactoPrecio()}"
+        },
+        metricas.variacionCompetidoresPct?.let { valor ->
+            "Hay ${valor.formatearAbs()} ${valor.masOMenos()} vendedores similares que antes. ${valor.impactoCompetidores()}"
+        },
+        metricas.presionCambiariaPct?.let { valor ->
+            "El dolar ${valor.verboCambioDolar()} ${valor.formatearAbs()} en la ventana revisada. ${valor.impactoDolar()}"
+        }
+    )
+
+    if (lecturas.isEmpty()) return
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Lectura del mercado",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        lecturas.forEach { lectura ->
+            Text(
+                text = lectura,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 private fun VeredictoComercial?.etiqueta(): String {
     return when (this) {
         VeredictoComercial.SALUDABLE -> "Saludable"
         VeredictoComercial.PRECAUCION -> "Precaucion"
-        VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Alerta"
-        VeredictoComercial.LIQUIDACION -> "Liquidacion"
-        VeredictoComercial.INCONCLUSO -> "Inconcluso"
+        VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Margen en riesgo"
+        VeredictoComercial.LIQUIDACION -> "Conviene liquidar stock"
+        VeredictoComercial.INCONCLUSO -> "Sin datos suficientes"
         null -> "Sin lectura"
+    }
+}
+
+private fun VeredictoComercial?.descripcionUsuario(motivoEvidencia: String?): String {
+    return when (this) {
+        VeredictoComercial.SALUDABLE -> "El margen sigue por encima del rango de riesgo y las senales de mercado no presionan la ficha."
+        VeredictoComercial.PRECAUCION -> "El producto todavia puede ser viable, pero conviene revisar precio, stock y nueva compra."
+        VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "El margen esta cerca del punto de equilibrio. Una baja de precio o alza del dolar puede dejarlo sin ganancia."
+        VeredictoComercial.LIQUIDACION -> "La lectura sugiere priorizar salida de stock antes de seguir comprando este producto."
+        VeredictoComercial.INCONCLUSO -> motivoEvidencia ?: "No hay datos de mercado suficientes para recomendar una accion."
+        null -> "Solicita una lectura para estimar margen, competencia y deterioro del mercado."
+    }
+}
+
+private fun EvaluacionComercial.descripcionPrecioSugerido(): String {
+    val margen = margenObjetivoPct?.let { "${"%.0f".format(it)}%" } ?: "objetivo"
+    val brecha = brechaPrecioSugeridoMercadoPct ?: return "Para lograr $margen de margen, usa el precio sugerido como referencia antes de reponer stock."
+
+    return if (brecha >= 0.0) {
+        "El mercado esta ${brecha.formatearAbs()} por encima del precio sugerido. El margen objetivo parece viable."
+    } else {
+        "El mercado esta ${brecha.formatearAbs()} por debajo del precio sugerido. El margen objetivo no se sostiene con el precio actual."
     }
 }
 
@@ -342,9 +425,51 @@ private fun VeredictoComercial?.colorContenedor() = when (this) {
 
 private fun EstadoEvaluacion.aTextoPresentable(): String {
     return when (this) {
-        EstadoEvaluacion.VIGENTE -> "Vigente"
-        EstadoEvaluacion.OBSOLETO -> "Obsoleto"
-        EstadoEvaluacion.INCONCLUSO -> "Inconcluso"
-        EstadoEvaluacion.FALLIDO -> "Pendiente"
+        EstadoEvaluacion.VIGENTE -> "Evaluado recientemente"
+        EstadoEvaluacion.OBSOLETO -> "Informacion desactualizada"
+        EstadoEvaluacion.INCONCLUSO -> "Sin datos suficientes"
+        EstadoEvaluacion.FALLIDO -> "Lectura pendiente"
+    }
+}
+
+private fun java.time.Instant.aTextoRelativo(): String {
+    val segundos = ((System.currentTimeMillis() - toEpochMilli()) / 1000).coerceAtLeast(0)
+    return when {
+        segundos < 60 -> "hace menos de un minuto"
+        segundos < 3_600 -> "hace ${segundos / 60} min"
+        segundos < 86_400 -> "hace ${segundos / 3_600} h"
+        else -> "hace ${segundos / 86_400} dias"
+    }
+}
+
+private fun Double.formatearAbs(): String = "${"%.1f".format(absoluteValue)}%"
+
+private fun Double.verboCambioPrecio(): String = if (this < 0.0) "bajaron" else "subieron"
+
+private fun Double.impactoPrecio(): String {
+    return if (this < 0.0) {
+        "Tu margen se esta comprimiendo."
+    } else {
+        "Hay mas espacio para sostener margen."
+    }
+}
+
+private fun Double.masOMenos(): String = if (this >= 0.0) "mas" else "menos"
+
+private fun Double.impactoCompetidores(): String {
+    return if (this >= 0.0) {
+        "El mercado se esta saturando."
+    } else {
+        "La presion competitiva bajo."
+    }
+}
+
+private fun Double.verboCambioDolar(): String = if (this >= 0.0) "subio" else "bajo"
+
+private fun Double.impactoDolar(): String {
+    return if (this >= 0.0) {
+        "Tu costo en soles aumento."
+    } else {
+        "Tu costo en soles se alivio."
     }
 }

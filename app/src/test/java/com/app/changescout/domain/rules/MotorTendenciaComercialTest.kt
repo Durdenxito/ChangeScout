@@ -40,6 +40,25 @@ class MotorTendenciaComercialTest {
     }
 
     @Test
+    fun calcular_ponderaMasElHistorialReciente() {
+        val metricas = motor.calcular(
+            actual = evaluacionActual(precioPromedioRealPen = 90.0),
+            historial = listOf(
+                evaluacionHistorico(
+                    precioPromedioRealPen = 100.0,
+                    evaluadoEn = actualFecha.minusSeconds(24 * 60 * 60)
+                ),
+                evaluacionHistorico(
+                    precioPromedioRealPen = 200.0,
+                    evaluadoEn = actualFecha.minusSeconds(90 * 24 * 60 * 60)
+                )
+            )
+        )
+
+        assertEquals(-19.1675, metricas.erosionPrecioLocalPct ?: 0.0, 0.0001)
+    }
+
+    @Test
     fun calcular_calculaCrecimientoDeCompetidoresContraPromedioHistorico() {
         val metricas = motor.calcular(
             actual = evaluacionActual(competidoresValidos = 30),

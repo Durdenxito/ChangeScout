@@ -135,9 +135,9 @@ class ViewModelDetalleProducto @Inject constructor(
         return when (this) {
             VeredictoComercial.SALUDABLE -> "Saludable"
             VeredictoComercial.PRECAUCION -> "Precaucion"
-            VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Alerta temprana"
-            VeredictoComercial.LIQUIDACION -> "Liquidacion"
-            VeredictoComercial.INCONCLUSO -> "Inconcluso"
+            VeredictoComercial.ALERTA_TEMPRANA_QUIEBRE -> "Margen en riesgo"
+            VeredictoComercial.LIQUIDACION -> "Conviene liquidar stock"
+            VeredictoComercial.INCONCLUSO -> "Sin datos suficientes"
             null -> "Sin clasificar"
         }
     }

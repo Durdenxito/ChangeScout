@@ -52,4 +52,14 @@ class CalculadoraLandedCostTest {
             )
         }
     }
+
+    @Test
+    fun calcularPrecioVentaSugeridoPen_calculaPrecioConMargenObjetivo() {
+        val resultado = calculadora.calcularPrecioVentaSugeridoPen(
+            costoTotalPen = 100.0,
+            margenObjetivoPct = 20.0
+        )
+
+        assertEquals(125.0, resultado, 0.0001)
+    }
 }

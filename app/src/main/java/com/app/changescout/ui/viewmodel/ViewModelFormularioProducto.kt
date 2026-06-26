@@ -4,8 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.changescout.domain.model.ComponentesCostoImportacion
+import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ProductoImportado
+import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.usecase.GuardarProductoImportadoUseCase
+import com.app.changescout.domain.usecase.PrevisualizarCompetenciaUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +41,9 @@ data class EstadoUiFormularioProducto(
     val cantidadDisponible: String = "",
     val queryCompetencia: String = "",
     val estaGuardando: Boolean = false,
+    val estaPrevisualizando: Boolean = false,
+    val previewCompetencia: List<PublicacionPreviewUi> = emptyList(),
+    val mensajePreview: String? = null,
     val mensajeValidacion: String? = null
 ) {
     val puedeEnviar: Boolean
@@ -46,7 +52,16 @@ data class EstadoUiFormularioProducto(
             cantidadDisponible.isNotBlank() &&
             queryCompetencia.isNotBlank() &&
             !estaGuardando
+
+    val puedePrevisualizar: Boolean
+        get() = !estaPrevisualizando && (queryCompetencia.isNotBlank() || nombre.isNotBlank())
 }
+
+data class PublicacionPreviewUi(
+    val titulo: String,
+    val precio: String,
+    val fuente: String
+)
 
 sealed interface EventoFormularioProducto {
     data class NombreCambiado(val value: String) : EventoFormularioProducto
@@ -57,6 +72,7 @@ sealed interface EventoFormularioProducto {
     data class OtrosCargosUsdCambiado(val value: String) : EventoFormularioProducto
     data class CantidadDisponibleCambiada(val value: String) : EventoFormularioProducto
     data class QueryCompetenciaCambiado(val value: String) : EventoFormularioProducto
+    data object PrevisualizarCompetenciaSolicitada : EventoFormularioProducto
     data object GuardarProductoSolicitado : EventoFormularioProducto
     data object RegresarDesdeFormularioSolicitado : EventoFormularioProducto
 }
@@ -69,6 +85,7 @@ sealed interface EfectoFormularioProducto {
 @HiltViewModel
 class ViewModelFormularioProducto @Inject constructor(
     private val guardarProductoImportadoUseCase: GuardarProductoImportadoUseCase,
+    private val previsualizarCompetenciaUseCase: PrevisualizarCompetenciaUseCase,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -98,6 +115,7 @@ class ViewModelFormularioProducto @Inject constructor(
             is EventoFormularioProducto.OtrosCargosUsdCambiado -> actualizarBorrador(otrosCargos = event.value)
             is EventoFormularioProducto.CantidadDisponibleCambiada -> actualizarBorrador(cantidad = event.value)
             is EventoFormularioProducto.QueryCompetenciaCambiado -> actualizarBorrador(query = event.value)
+            EventoFormularioProducto.PrevisualizarCompetenciaSolicitada -> previsualizarCompetencia()
             EventoFormularioProducto.GuardarProductoSolicitado -> guardarProducto()
             EventoFormularioProducto.RegresarDesdeFormularioSolicitado -> {
                 viewModelScope.launch {
@@ -118,15 +136,22 @@ class ViewModelFormularioProducto @Inject constructor(
         query: String? = null
     ) {
         _uiState.update { estado ->
+            val nuevoNombre = nombre ?: estado.nombre
+            val nuevoQuery = when {
+                query != null -> query
+                nombre != null && (estado.queryCompetencia.isBlank() || estado.queryCompetencia == estado.nombre) -> nombre
+                else -> estado.queryCompetencia
+            }
             estado.copy(
-                nombre = nombre ?: estado.nombre,
+                nombre = nuevoNombre,
                 precioFobUsd = precioFob ?: estado.precioFobUsd,
                 fleteUsd = flete ?: estado.fleteUsd,
                 seguroUsd = seguro ?: estado.seguroUsd,
                 arancelesUsd = aranceles ?: estado.arancelesUsd,
                 otrosCargosUsd = otrosCargos ?: estado.otrosCargosUsd,
                 cantidadDisponible = cantidad ?: estado.cantidadDisponible,
-                queryCompetencia = query ?: estado.queryCompetencia,
+                queryCompetencia = nuevoQuery,
+                mensajePreview = null,
                 mensajeValidacion = null
             )
         }
@@ -138,6 +163,53 @@ class ViewModelFormularioProducto @Inject constructor(
         savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] = _uiState.value.otrosCargosUsd
         savedStateHandle[FormularioProductoKeys.CANTIDAD] = _uiState.value.cantidadDisponible
         savedStateHandle[FormularioProductoKeys.QUERY] = _uiState.value.queryCompetencia
+    }
+
+    private fun previsualizarCompetencia() {
+        viewModelScope.launch {
+            val query = _uiState.value.queryCompetencia.ifBlank { _uiState.value.nombre }.trim()
+            _uiState.update {
+                it.copy(
+                    estaPrevisualizando = true,
+                    previewCompetencia = emptyList(),
+                    mensajePreview = null
+                )
+            }
+
+            when (val resultado = previsualizarCompetenciaUseCase(query)) {
+                is ResultadoOperacion.Exito -> {
+                    _uiState.update {
+                        it.copy(
+                            estaPrevisualizando = false,
+                            previewCompetencia = resultado.data.map { publicacion -> publicacion.toPreviewUi() },
+                            mensajePreview = if (resultado.data.isEmpty()) {
+                                "No se encontraron publicaciones para esa busqueda."
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+                is ResultadoOperacion.DatosObsoletos -> {
+                    _uiState.update {
+                        it.copy(
+                            estaPrevisualizando = false,
+                            previewCompetencia = resultado.data.map { publicacion -> publicacion.toPreviewUi() },
+                            mensajePreview = "Se muestran resultados guardados porque el mercado en vivo no respondio."
+                        )
+                    }
+                }
+                is ResultadoOperacion.Fallo -> {
+                    _uiState.update {
+                        it.copy(
+                            estaPrevisualizando = false,
+                            previewCompetencia = emptyList(),
+                            mensajePreview = resultado.error.mensaje
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun guardarProducto() {
@@ -211,5 +283,19 @@ class ViewModelFormularioProducto @Inject constructor(
         return takeIf { valor -> valor.isNotBlank() }
             ?.parsearMontoUsd("el costo opcional")
             ?: 0.0
+    }
+
+    private fun PublicacionMercado.toPreviewUi(): PublicacionPreviewUi {
+        val simboloMoneda = when (moneda.name) {
+            "PEN" -> "S/"
+            "USD" -> "USD"
+            else -> moneda.name
+        }
+
+        return PublicacionPreviewUi(
+            titulo = titulo,
+            precio = "$simboloMoneda ${"%.2f".format(precio)}",
+            fuente = nombreFuente
+        )
     }
 }
