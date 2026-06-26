@@ -13,6 +13,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation as ServerContentNegotiation
 import io.ktor.server.response.respond
+import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 
@@ -24,11 +25,13 @@ fun main() {
 
 fun Application.module(
     apifyConfig: ApifyConfig = ApifyConfig.fromEnv(),
-    nlpConfig: NlpConfig = NlpConfig.fromEnv()
+    nlpConfig: NlpConfig = NlpConfig.fromEnv(),
+    authConfig: AuthConfig = AuthConfig.fromEnv()
 ) {
     install(ServerContentNegotiation) {
         gson()
     }
+    configureAuth(authConfig)
 
     val client = HttpClient(CIO) {
         expectSuccess = true
@@ -57,7 +60,14 @@ fun Application.module(
             call.respond(mapOf("status" to "ok"))
         }
 
-        marketplaceRoutes(marketplace, apifyConfig)
-        nlpRoutes(nlp)
+        if (authConfig.enabled) {
+            authenticate(AUTH_SUPABASE) {
+                marketplaceRoutes(marketplace, apifyConfig)
+                nlpRoutes(nlp)
+            }
+        } else {
+            marketplaceRoutes(marketplace, apifyConfig)
+            nlpRoutes(nlp)
+        }
     }
 }

@@ -35,13 +35,11 @@ data class TarjetaProductoRadarUiModel(
 sealed interface EventoRadarProductos {
     data object AgregarProductoSolicitado : EventoRadarProductos
     data class ProductoSeleccionado(val productoId: Long) : EventoRadarProductos
-    data object EvaluacionPendienteConsultada : EventoRadarProductos
 }
 
 sealed interface EfectoRadarProductos {
     data object NavegarAFormularioProducto : EfectoRadarProductos
     data class NavegarADetalleProducto(val productoId: Long) : EfectoRadarProductos
-    data class MostrarMensajeRadar(val mensaje: String) : EfectoRadarProductos
 }
 
 @HiltViewModel
@@ -87,14 +85,6 @@ class ViewModelRadarProductos @Inject constructor(
 
                 is EventoRadarProductos.ProductoSeleccionado -> {
                     _uiEffect.emit(EfectoRadarProductos.NavegarADetalleProducto(event.productoId))
-                }
-
-                EventoRadarProductos.EvaluacionPendienteConsultada -> {
-                    _uiEffect.emit(
-                        EfectoRadarProductos.MostrarMensajeRadar(
-                            "Las lecturas de tendencia apareceran aqui cuando esten disponibles."
-                        )
-                    )
                 }
             }
         }

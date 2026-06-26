@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Schedule
@@ -26,15 +25,12 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,7 +39,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
-import com.app.changescout.ui.screens.components.BotonSecundario
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
 import com.app.changescout.ui.screens.components.FondoOperativo
@@ -66,16 +61,12 @@ fun PantallaRadarProductos(
     radarViewModel: ViewModelRadarProductos = hiltViewModel()
 ) {
     val state by radarViewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(radarViewModel) {
         radarViewModel.uiEffect.collect { effect ->
             when (effect) {
                 EfectoRadarProductos.NavegarAFormularioProducto -> onNavegarAFormulario()
                 is EfectoRadarProductos.NavegarADetalleProducto -> onNavegarADetalle(effect.productoId)
-                is EfectoRadarProductos.MostrarMensajeRadar -> {
-                    snackbarHostState.showSnackbar(effect.mensaje)
-                }
             }
         }
     }
@@ -83,15 +74,11 @@ fun PantallaRadarProductos(
     FondoOperativo {
         ContenidoRadarProductos(
             state = state,
-            snackbarHostState = snackbarHostState,
             onNuevoProducto = {
                 radarViewModel.onEvent(EventoRadarProductos.AgregarProductoSolicitado)
             },
             onSeleccionarProducto = { productoId ->
                 radarViewModel.onEvent(EventoRadarProductos.ProductoSeleccionado(productoId))
-            },
-            onConsultarContexto = {
-                radarViewModel.onEvent(EventoRadarProductos.EvaluacionPendienteConsultada)
             }
         )
     }
@@ -101,14 +88,11 @@ fun PantallaRadarProductos(
 @Composable
 private fun ContenidoRadarProductos(
     state: EstadoUiRadarProductos,
-    snackbarHostState: SnackbarHostState,
     onNuevoProducto: () -> Unit,
-    onSeleccionarProducto: (Long) -> Unit,
-    onConsultarContexto: () -> Unit
+    onSeleccionarProducto: (Long) -> Unit
 ) {
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -148,8 +132,7 @@ private fun ContenidoRadarProductos(
             item {
                 ResumenRadar(
                     cantidadProductos = state.productos.size,
-                    cantidadPendiente = state.productos.count { it.estadoEvaluacion == null },
-                    onConsultarContexto = onConsultarContexto
+                    cantidadPendiente = state.productos.count { it.estadoEvaluacion == null }
                 )
             }
 
@@ -188,8 +171,7 @@ private fun ContenidoRadarProductos(
 @Composable
 private fun ResumenRadar(
     cantidadProductos: Int,
-    cantidadPendiente: Int,
-    onConsultarContexto: () -> Unit
+    cantidadPendiente: Int
 ) {
     TarjetaOperativa(
         acento = MaterialTheme.colorScheme.primary
@@ -216,12 +198,6 @@ private fun ResumenRadar(
                 modifier = Modifier.weight(1f)
             )
         }
-        BotonSecundario(
-            texto = "Ver criterio de lectura",
-            icono = Icons.Outlined.Info,
-            onClick = onConsultarContexto,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
