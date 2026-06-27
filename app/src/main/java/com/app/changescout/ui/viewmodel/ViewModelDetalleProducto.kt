@@ -3,10 +3,12 @@ package com.app.changescout.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.VeredictoComercial
+import com.app.changescout.domain.usecase.EliminarProductoImportadoUseCase
 import com.app.changescout.domain.usecase.EvaluarTendenciaProductoUseCase
 import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
 import com.app.changescout.domain.usecase.ObservarUltimaEvaluacionUseCase
@@ -23,21 +25,29 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@Immutable
 data class EstadoUiDetalleProducto(
     val producto: ProductoImportado? = null,
     val evaluacion: EvaluacionComercial? = null,
     val estaCargando: Boolean = true,
     val estaEvaluando: Boolean = false,
+    val estaEliminando: Boolean = false,
+    val mostrarConfirmarEliminacion: Boolean = false,
     val mensajeError: String? = null
 )
 
 sealed interface EventoDetalleProducto {
     data object EvaluarProductoActualSolicitado : EventoDetalleProducto
+    data object EditarProductoSolicitado : EventoDetalleProducto
+    data object EliminarProductoSolicitado : EventoDetalleProducto
+    data object CancelarEliminacionSolicitada : EventoDetalleProducto
+    data object ConfirmarEliminacionSolicitada : EventoDetalleProducto
     data object RegresarDesdeDetalleSolicitado : EventoDetalleProducto
 }
 
 sealed interface EfectoDetalleProducto {
     data object NavegarAtrasDesdeDetalle : EfectoDetalleProducto
+    data class NavegarAEditarProducto(val producto: ProductoImportado) : EfectoDetalleProducto
     data class MostrarMensajeDetalle(val mensaje: String) : EfectoDetalleProducto
 }
 
@@ -45,6 +55,7 @@ sealed interface EfectoDetalleProducto {
 class ViewModelDetalleProducto @Inject constructor(
     private val observarDetalleProductoUseCase: ObservarDetalleProductoUseCase,
     private val observarUltimaEvaluacionUseCase: ObservarUltimaEvaluacionUseCase,
+    private val eliminarProductoImportadoUseCase: EliminarProductoImportadoUseCase,
     private val evaluarTendenciaProductoUseCase: EvaluarTendenciaProductoUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -87,10 +98,55 @@ class ViewModelDetalleProducto @Inject constructor(
                     evaluarProductoActual()
                 }
 
+                EventoDetalleProducto.EditarProductoSolicitado -> {
+                    _uiState.value.producto?.let { producto ->
+                        _uiEffect.emit(EfectoDetalleProducto.NavegarAEditarProducto(producto))
+                    }
+                }
+
+                EventoDetalleProducto.EliminarProductoSolicitado -> {
+                    _uiState.update { it.copy(mostrarConfirmarEliminacion = true) }
+                }
+
+                EventoDetalleProducto.CancelarEliminacionSolicitada -> {
+                    _uiState.update { it.copy(mostrarConfirmarEliminacion = false) }
+                }
+
+                EventoDetalleProducto.ConfirmarEliminacionSolicitada -> {
+                    eliminarProductoActual()
+                }
+
                 EventoDetalleProducto.RegresarDesdeDetalleSolicitado -> {
                     _uiEffect.emit(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
                 }
             }
+        }
+    }
+
+    private suspend fun eliminarProductoActual() {
+        if (_uiState.value.estaEliminando) return
+
+        _uiState.update {
+            it.copy(
+                estaEliminando = true,
+                mostrarConfirmarEliminacion = false,
+                mensajeError = null
+            )
+        }
+
+        runCatching {
+            eliminarProductoImportadoUseCase(productoId)
+        }.onSuccess {
+            _uiEffect.emit(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
+        }.onFailure { throwable ->
+            val mensaje = throwable.message ?: "No se pudo eliminar el producto."
+            _uiState.update {
+                it.copy(
+                    estaEliminando = false,
+                    mensajeError = mensaje
+                )
+            }
+            _uiEffect.emit(EfectoDetalleProducto.MostrarMensajeDetalle(mensaje))
         }
     }
 

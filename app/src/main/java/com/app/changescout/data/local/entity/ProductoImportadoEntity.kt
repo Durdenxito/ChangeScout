@@ -1,14 +1,19 @@
 package com.app.changescout.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.app.changescout.domain.model.ComponentesCostoImportacion
 import com.app.changescout.domain.model.ProductoImportado
 
-@Entity(tableName = "productos_importados")
+@Entity(
+    tableName = "productos_importados",
+    indices = [Index(value = ["usuarioId"])]
+)
 data class ProductoImportadoEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+    val usuarioId: String,
     val nombre: String,
     val queryCompetencia: String,
     val precioFobUsd: Double,
@@ -37,9 +42,10 @@ data class ProductoImportadoEntity(
     }
 
     companion object {
-        fun fromDomain(producto: ProductoImportado): ProductoImportadoEntity {
+        fun fromDomain(producto: ProductoImportado, usuarioId: String): ProductoImportadoEntity {
             return ProductoImportadoEntity(
                 id = producto.id,
+                usuarioId = usuarioId,
                 nombre = producto.nombre,
                 queryCompetencia = producto.queryCompetencia,
                 precioFobUsd = producto.componentesCosto.precioFobUsd,

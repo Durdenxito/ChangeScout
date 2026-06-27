@@ -40,6 +40,20 @@ class MotorTendenciaComercialTest {
     }
 
     @Test
+    fun calcular_conUnaSolaLecturaHistorica_noEmiteTendencia() {
+        val metricas = motor.calcular(
+            actual = evaluacionActual(precioPromedioRealPen = 90.0),
+            historial = listOf(
+                evaluacionHistorico(precioPromedioRealPen = 100.0)
+            )
+        )
+
+        assertNull(metricas.erosionPrecioLocalPct)
+        assertNull(metricas.variacionCompetidoresPct)
+        assertNull(metricas.presionCambiariaPct)
+    }
+
+    @Test
     fun calcular_ponderaMasElHistorialReciente() {
         val metricas = motor.calcular(
             actual = evaluacionActual(precioPromedioRealPen = 90.0),
@@ -98,7 +112,11 @@ class MotorTendenciaComercialTest {
                     precioPromedioRealPen = 30.0,
                     evaluadoEn = actualFecha.plusSeconds(60)
                 ),
-                evaluacionHistorico(precioPromedioRealPen = 100.0)
+                evaluacionHistorico(precioPromedioRealPen = 100.0),
+                evaluacionHistorico(
+                    precioPromedioRealPen = 100.0,
+                    evaluadoEn = actualFecha.minusSeconds(2 * 24 * 60 * 60)
+                )
             )
         )
 
@@ -126,6 +144,10 @@ class MotorTendenciaComercialTest {
                 evaluacionHistorico(
                     precioPromedioRealPen = 100.0,
                     evaluadoEn = actualFecha.minusSeconds(10 * 24 * 60 * 60)
+                ),
+                evaluacionHistorico(
+                    precioPromedioRealPen = 100.0,
+                    evaluadoEn = actualFecha.minusSeconds(5 * 24 * 60 * 60)
                 ),
                 evaluacionHistorico(
                     precioPromedioRealPen = 1000.0,

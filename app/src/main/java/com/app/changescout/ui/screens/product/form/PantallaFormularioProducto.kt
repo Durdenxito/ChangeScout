@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -95,14 +96,7 @@ private fun ContenidoFormularioProducto(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 title = {
-                    Column {
-                        Text("Nuevo producto")
-                        Text(
-                            text = "Costos y mercado comparable",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(if (state.esEdicion) "Editar producto" else "Nuevo producto")
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -122,11 +116,23 @@ private fun ContenidoFormularioProducto(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (state.estaCargandoEdicion) {
+                TarjetaOperativa {
+                    EncabezadoSeccion(
+                        icono = Icons.Outlined.Description,
+                        titulo = "Cargando ficha"
+                    )
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                return@Column
+            }
+
             TarjetaOperativa {
                 EncabezadoSeccion(
                     icono = Icons.Outlined.Description,
-                    titulo = "Datos y costos",
-                    subtitulo = "El precio en origen es obligatorio; los demas cargos pueden quedar vacios."
+                    titulo = "Datos y costos"
                 )
                 CampoOperativo(
                     value = state.nombre,
@@ -138,7 +144,6 @@ private fun ContenidoFormularioProducto(
                     value = state.precioFobUsd,
                     onValueChange = { onEvent(EventoFormularioProducto.PrecioFobUsdCambiado(it)) },
                     label = "Precio del producto en origen (USD)",
-                    supportingText = "Monto pagado al proveedor antes del envio.",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
                 )
@@ -182,8 +187,7 @@ private fun ContenidoFormularioProducto(
             TarjetaOperativa {
                 EncabezadoSeccion(
                     icono = Icons.Outlined.Search,
-                    titulo = "Busqueda comparable",
-                    subtitulo = "Usa el nombre que escribirias en MercadoLibre para encontrar el mismo producto."
+                    titulo = "Busqueda comparable"
                 )
                 CampoOperativo(
                     value = state.queryCompetencia,
@@ -218,7 +222,11 @@ private fun ContenidoFormularioProducto(
             }
 
             BotonPrimario(
-                texto = if (state.estaGuardando) "Guardando ficha..." else "Guardar ficha",
+                texto = when {
+                    state.estaGuardando -> "Guardando ficha..."
+                    state.esEdicion -> "Guardar cambios"
+                    else -> "Guardar ficha"
+                },
                 icono = Icons.Outlined.Save,
                 onClick = {
                     onEvent(EventoFormularioProducto.GuardarProductoSolicitado)
@@ -277,34 +285,31 @@ private fun CampoOperativo(
     onValueChange: (String) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
-    supportingText: String? = null,
     minLines: Int = 1,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     leadingIcon: @Composable (() -> Unit)? = null
 ) {
+    val campoColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
+    )
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         label = { Text(label) },
-        supportingText = supportingText?.let { texto ->
-            { Text(texto) }
-        },
         leadingIcon = leadingIcon,
         minLines = minLines,
         singleLine = minLines == 1,
         keyboardOptions = keyboardOptions,
         shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            cursorColor = MaterialTheme.colorScheme.primary,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
-        )
+        colors = campoColors
     )
 }

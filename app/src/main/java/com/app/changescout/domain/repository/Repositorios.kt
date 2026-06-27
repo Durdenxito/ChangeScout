@@ -13,6 +13,7 @@ interface RepositorioProductoImportado {
     fun observarPorId(productoId: Long): Flow<ProductoImportado?>
     suspend fun obtenerPorId(productoId: Long): ProductoImportado?
     suspend fun upsert(producto: ProductoImportado): Long
+    suspend fun eliminar(productoId: Long)
 }
 
 interface RepositorioEvaluacionComercial {

@@ -11,6 +11,11 @@ import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceApi
 import com.app.changescout.data.api.marketplace.backend.ProveedorMarketplaceBackend
 import com.app.changescout.data.api.nlp.backend.BackendNlpApi
 import com.app.changescout.data.api.nlp.backend.ProveedorFiltroNlpBackend
+import com.app.changescout.data.auth.AutenticadorBackend
+import com.app.changescout.data.auth.AlmacenSesion
+import com.app.changescout.data.auth.InterceptorSesionBackend
+import com.app.changescout.data.auth.SupabaseAuthApi
+import com.app.changescout.data.auth.SupabaseAuthConfig
 import com.app.changescout.data.local.ChangeScoutDatabase
 import com.app.changescout.data.local.dao.ProductoImportadoDao
 import com.app.changescout.data.local.dao.EvaluacionComercialDao
@@ -31,6 +36,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -45,7 +51,8 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    @ClienteHttpPublico
+    fun provideOkHttpClientPublico(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -55,21 +62,41 @@ object ModulosChangeScout {
 
     @Provides
     @Singleton
+    @ClienteHttpBackend
+    fun provideOkHttpClientBackend(
+        @ClienteHttpPublico okHttpClient: OkHttpClient,
+        interceptorSesionBackend: InterceptorSesionBackend,
+        autenticadorBackend: AutenticadorBackend
+    ): OkHttpClient {
+        return okHttpClient.newBuilder()
+            .addInterceptor(interceptorSesionBackend)
+            .authenticator(autenticadorBackend)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideApisNetTipoCambioApi(
-        okHttpClient: OkHttpClient
+        @ClienteHttpPublico okHttpClient: OkHttpClient
     ): ApisNetTipoCambioApi = retrofitApi(ApisNetTipoCambioConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
     fun provideBackendMarketplaceApi(
-        okHttpClient: OkHttpClient
+        @ClienteHttpBackend okHttpClient: OkHttpClient
     ): BackendMarketplaceApi = retrofitApi(BackendProxyConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
     fun provideBackendNlpApi(
-        okHttpClient: OkHttpClient
+        @ClienteHttpBackend okHttpClient: OkHttpClient
     ): BackendNlpApi = retrofitApi(BackendProxyConfig.BASE_URL, okHttpClient)
+
+    @Provides
+    @Singleton
+    fun provideSupabaseAuthApi(
+        @ClienteHttpPublico okHttpClient: OkHttpClient
+    ): SupabaseAuthApi = retrofitApi(SupabaseAuthConfig.BASE_URL, okHttpClient)
 
     @Provides
     @Singleton
@@ -120,7 +147,8 @@ object ModulosChangeScout {
             .addMigrations(
                 MigracionesBaseDatosChangeScout.MIGRATION_1_2,
                 MigracionesBaseDatosChangeScout.MIGRATION_2_3,
-                MigracionesBaseDatosChangeScout.MIGRATION_3_4
+                MigracionesBaseDatosChangeScout.MIGRATION_3_4,
+                MigracionesBaseDatosChangeScout.MIGRATION_4_5
             )
             .build()
     }
@@ -138,17 +166,19 @@ object ModulosChangeScout {
     @Provides
     @Singleton
     fun provideRepositorioProductoImportado(
-        productoDao: ProductoImportadoDao
+        productoDao: ProductoImportadoDao,
+        almacenSesion: AlmacenSesion
     ): RepositorioProductoImportado {
-        return RepositorioProductoImportadoRoom(productoDao)
+        return RepositorioProductoImportadoRoom(productoDao, almacenSesion)
     }
 
     @Provides
     @Singleton
     fun provideRepositorioEvaluacionComercial(
-        evaluacionDao: EvaluacionComercialDao
+        evaluacionDao: EvaluacionComercialDao,
+        almacenSesion: AlmacenSesion
     ): RepositorioEvaluacionComercial {
-        return RepositorioEvaluacionComercialRoom(evaluacionDao)
+        return RepositorioEvaluacionComercialRoom(evaluacionDao, almacenSesion)
     }
 
     private inline fun <reified T> retrofitApi(
@@ -163,3 +193,11 @@ object ModulosChangeScout {
             .create(T::class.java)
     }
 }
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ClienteHttpPublico
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ClienteHttpBackend

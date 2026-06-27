@@ -221,6 +221,8 @@ class EvaluarTendenciaProductoUseCaseTest {
         override suspend fun upsert(producto: ProductoImportado): Long {
             return producto.id
         }
+
+        override suspend fun eliminar(productoId: Long) = Unit
     }
 
     private class FakeRepositorioEvaluacionComercial : RepositorioEvaluacionComercial {

@@ -107,4 +107,29 @@ object MigracionesBaseDatosChangeScout {
             db.execSQL("ALTER TABLE evaluaciones_comerciales ADD COLUMN brechaPrecioSugeridoMercadoPct REAL")
         }
     }
+
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE productos_importados ADD COLUMN usuarioId TEXT NOT NULL DEFAULT 'sin_sesion'")
+            db.execSQL("ALTER TABLE evaluaciones_comerciales ADD COLUMN usuarioId TEXT NOT NULL DEFAULT 'sin_sesion'")
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_productos_importados_usuarioId
+                ON productos_importados(usuarioId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_evaluaciones_comerciales_usuarioId
+                ON evaluaciones_comerciales(usuarioId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_evaluaciones_comerciales_usuarioId_productoId
+                ON evaluaciones_comerciales(usuarioId, productoId)
+                """.trimIndent()
+            )
+        }
+    }
 }

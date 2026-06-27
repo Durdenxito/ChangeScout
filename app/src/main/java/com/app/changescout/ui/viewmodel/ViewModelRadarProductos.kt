@@ -2,6 +2,7 @@ package com.app.changescout.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.usecase.ObservarRadarProductosUseCase
@@ -16,12 +17,14 @@ import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
+@Immutable
 data class EstadoUiRadarProductos(
     val productos: List<TarjetaProductoRadarUiModel> = emptyList(),
     val estaCargando: Boolean = true,
     val mensajeError: String? = null
 )
 
+@Immutable
 data class TarjetaProductoRadarUiModel(
     val productoId: Long,
     val nombre: String,

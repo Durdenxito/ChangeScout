@@ -31,10 +31,11 @@ Los ViewModels no calculan costos, margenes ni tendencias. Esa logica vive en ca
 - Tipo de cambio real con APIS.NET.
 - Marketplace via backend Ktor con Apify/MercadoLibre.
 - Filtro NLP via backend Ktor con Groq.
+- Autenticacion con Supabase Auth y JWT validado por el backend.
 - Persistencia local con Room.
 - Tabla `productos_importados` para fichas base.
 - Tabla `evaluaciones_comerciales` para evaluaciones historicas.
-- Migracion Room `1 -> 2`.
+- Migraciones Room `1 -> 4`.
 
 ## Requisitos
 
@@ -43,6 +44,14 @@ Los ViewModels no calculan costos, margenes ni tendencias. Esa logica vive en ca
 - Conexion a internet para resolver dependencias Gradle.
 
 ## Ejecutar
+
+Agrega tus valores publicos de Supabase y backend en `local.properties`:
+
+```properties
+MARKETPLACE_BACKEND_URL=https://changescout.sytes.net/
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+SUPABASE_ANON_KEY=tu_anon_key
+```
 
 ```bash
 ./gradlew :app:assembleDebug

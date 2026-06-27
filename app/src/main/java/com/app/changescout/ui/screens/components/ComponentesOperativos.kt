@@ -1,7 +1,5 @@
 package com.app.changescout.ui.screens.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,7 +29,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +38,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.changescout.ui.theme.BullionGold
 import com.app.changescout.ui.theme.OutlineSubtle
+
+private val TarjetaShape = RoundedCornerShape(8.dp)
+private val ChipShape = RoundedCornerShape(8.dp)
+private val MetricaShape = RoundedCornerShape(8.dp)
+private val BotonPrimarioShape = RoundedCornerShape(12.dp)
+private val IconBadgeShape = RoundedCornerShape(8.dp)
+private val ChipOutlineBorder = OutlineSubtle.copy(alpha = 0.55f)
 
 @Composable
 fun FondoOperativo(
@@ -62,18 +65,13 @@ fun TarjetaOperativa(
     acento: Color = BullionGold,
     contenido: @Composable ColumnScope.() -> Unit
 ) {
-    val borde by animateColorAsState(
-        targetValue = acento.copy(alpha = 0.32f),
-        label = "card-border"
-    )
-
     Card(
-        modifier = modifier.animateContentSize(),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier,
+        shape = TarjetaShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, borde),
+        border = BorderStroke(1.dp, acento.copy(alpha = 0.32f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         CompositionLocalProvider(
@@ -89,7 +87,6 @@ fun TarjetaOperativa(
         }
     }
 }
-
 @Composable
 fun BotonPrimario(
     texto: String,
@@ -103,7 +100,7 @@ fun BotonPrimario(
         onClick = onClick,
         enabled = enabled && !cargando,
         modifier = modifier.defaultMinSize(minHeight = 52.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = BotonPrimarioShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -133,7 +130,7 @@ fun BotonSecundario(
         onClick = onClick,
         enabled = enabled && !cargando,
         modifier = modifier.defaultMinSize(minHeight = 48.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = BotonPrimarioShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f))
     ) {
         ContenidoBoton(
@@ -172,15 +169,14 @@ private fun ContenidoBoton(
 @Composable
 fun EncabezadoSeccion(
     icono: ImageVector,
-    titulo: String,
-    subtitulo: String? = null
+    titulo: String
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = IconBadgeShape,
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
         ) {
@@ -202,14 +198,6 @@ fun EncabezadoSeccion(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (subtitulo != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitulo,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
@@ -222,13 +210,11 @@ fun ChipOperativo(
     contenedor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contenido: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    val fondo by animateColorAsState(targetValue = contenedor, label = "chip-bg")
-
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        color = fondo,
-        border = BorderStroke(1.dp, OutlineSubtle.copy(alpha = 0.55f)),
+        shape = ChipShape,
+        color = contenedor,
+        border = BorderStroke(1.dp, ChipOutlineBorder),
         tonalElevation = 0.dp
     ) {
         Row(
@@ -262,10 +248,8 @@ fun MetricaResumida(
     acento: Color = MaterialTheme.colorScheme.primary
 ) {
     Surface(
-        modifier = modifier
-            .defaultMinSize(minHeight = 76.dp)
-            .animateContentSize(),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.defaultMinSize(minHeight = 76.dp),
+        shape = MetricaShape,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f),
         border = BorderStroke(1.dp, OutlineSubtle),
         tonalElevation = 0.dp
@@ -278,7 +262,7 @@ fun MetricaResumida(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = MetricaShape,
                 color = acento.copy(alpha = 0.12f)
             ) {
                 Icon(

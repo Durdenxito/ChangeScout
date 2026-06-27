@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Schedule
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -40,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.EvaluacionComercial
 import com.app.changescout.domain.model.MetricasTendencia
+import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.ui.screens.components.BotonPrimario
 import com.app.changescout.ui.screens.components.ChipOperativo
@@ -59,6 +64,7 @@ import kotlin.math.absoluteValue
 @Composable
 fun PantallaDetalleProducto(
     onNavegarAtras: () -> Unit,
+    onNavegarAEditar: (ProductoImportado) -> Unit,
     detalleViewModel: ViewModelDetalleProducto = hiltViewModel()
 ) {
     val state by detalleViewModel.uiState.collectAsStateWithLifecycle()
@@ -68,6 +74,7 @@ fun PantallaDetalleProducto(
         detalleViewModel.uiEffect.collect { effect ->
             when (effect) {
                 EfectoDetalleProducto.NavegarAtrasDesdeDetalle -> onNavegarAtras()
+                is EfectoDetalleProducto.NavegarAEditarProducto -> onNavegarAEditar(effect.producto)
                 is EfectoDetalleProducto.MostrarMensajeDetalle -> {
                     snackbarHostState.showSnackbar(effect.mensaje)
                 }
@@ -100,20 +107,27 @@ private fun ContenidoDetalleProducto(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 title = {
-                    Column {
-                        Text("Producto")
-                        Text(
-                            text = "Costo, precio y riesgo comercial",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text("Producto")
                 },
                 navigationIcon = {
                     IconButton(onClick = {
                         onEvent(EventoDetalleProducto.RegresarDesdeDetalleSolicitado)
                     }) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onEvent(EventoDetalleProducto.EditarProductoSolicitado) },
+                        enabled = state.producto != null && !state.estaEliminando
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = "Editar producto")
+                    }
+                    IconButton(
+                        onClick = { onEvent(EventoDetalleProducto.EliminarProductoSolicitado) },
+                        enabled = state.producto != null && !state.estaEliminando
+                    ) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Eliminar producto")
                     }
                 }
             )
@@ -131,8 +145,7 @@ private fun ContenidoDetalleProducto(
                 TarjetaOperativa {
                     EncabezadoSeccion(
                         icono = Icons.Outlined.Schedule,
-                        titulo = "Cargando producto",
-                        subtitulo = "Leyendo la ficha guardada en el dispositivo."
+                        titulo = "Cargando producto"
                     )
                 }
                 return@Column
@@ -142,8 +155,7 @@ private fun ContenidoDetalleProducto(
                 TarjetaOperativa {
                     EncabezadoSeccion(
                         icono = Icons.Outlined.Inventory2,
-                        titulo = producto.nombre,
-                        subtitulo = "Costos base, stock y busqueda comparable."
+                        titulo = producto.nombre
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -162,19 +174,13 @@ private fun ContenidoDetalleProducto(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    ChipOperativo(
-                        texto = producto.queryCompetencia,
-                        icono = Icons.Outlined.Search,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
 
             TarjetaOperativa {
                 EncabezadoSeccion(
                     icono = Icons.Outlined.QueryStats,
-                    titulo = "Resultado comercial",
-                    subtitulo = "Margen, precio sugerido y presion del mercado."
+                    titulo = "Resultado comercial"
                 )
 
                 if (state.evaluacion == null) {
@@ -189,7 +195,7 @@ private fun ContenidoDetalleProducto(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    state.evaluacion.evaluacionResumen()
+                    state.evaluacion.evaluacionResumen(state.producto)
                 }
 
                 if (state.estaEvaluando) {
@@ -230,10 +236,40 @@ private fun ContenidoDetalleProducto(
             }
         }
     }
+
+    if (state.mostrarConfirmarEliminacion) {
+        AlertDialog(
+            onDismissRequest = {
+                onEvent(EventoDetalleProducto.CancelarEliminacionSolicitada)
+            },
+            title = { Text("Eliminar producto") },
+            text = {
+                Text("Se quitara esta ficha y sus lecturas guardadas del dispositivo.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEvent(EventoDetalleProducto.ConfirmarEliminacionSolicitada)
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        onEvent(EventoDetalleProducto.CancelarEliminacionSolicitada)
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun EvaluacionComercial.evaluacionResumen() {
+private fun EvaluacionComercial.evaluacionResumen(producto: ProductoImportado?) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -309,6 +345,15 @@ private fun EvaluacionComercial.evaluacionResumen() {
         )
     }
 
+    gananciaEstimadaLotePen(producto)?.let { ganancia ->
+        MetricaResumida(
+            titulo = "Ganancia lote",
+            valor = "S/ ${"%.2f".format(ganancia)}",
+            icono = Icons.Outlined.AttachMoney,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
     if (precioVentaSugeridoPen != null) {
         Text(
             text = descripcionPrecioSugerido(),
@@ -347,13 +392,13 @@ private fun EvaluacionComercial.evaluacionResumen() {
 @Composable
 private fun TendenciasComerciales(metricas: MetricasTendencia) {
     val lecturas = listOfNotNull(
-        metricas.erosionPrecioLocalPct?.let { valor ->
+        metricas.erosionPrecioLocalPct?.takeIf { it.esCambioVisible() }?.let { valor ->
             "Los precios comparables ${valor.verboCambioPrecio()} ${valor.formatearAbs()} frente a tus lecturas recientes. ${valor.impactoPrecio()}"
         },
-        metricas.variacionCompetidoresPct?.let { valor ->
+        metricas.variacionCompetidoresPct?.takeIf { it.esCambioVisible() }?.let { valor ->
             "Hay ${valor.formatearAbs()} ${valor.masOMenos()} vendedores similares que antes. ${valor.impactoCompetidores()}"
         },
-        metricas.presionCambiariaPct?.let { valor ->
+        metricas.presionCambiariaPct?.takeIf { it.esCambioVisible() }?.let { valor ->
             "El dolar ${valor.verboCambioDolar()} ${valor.formatearAbs()} en la ventana revisada. ${valor.impactoDolar()}"
         }
     )
@@ -413,6 +458,13 @@ private fun EvaluacionComercial.descripcionPrecioSugerido(): String {
     }
 }
 
+private fun EvaluacionComercial.gananciaEstimadaLotePen(producto: ProductoImportado?): Double? {
+    val precio = precioPromedioRealPen ?: return null
+    val costo = costoTotalPen ?: return null
+    val cantidad = producto?.cantidadDisponible?.takeIf { it > 0 } ?: return null
+    return (precio - costo) * cantidad
+}
+
 @Composable
 private fun VeredictoComercial?.colorContenedor() = when (this) {
     VeredictoComercial.SALUDABLE -> SuccessContainer
@@ -443,6 +495,8 @@ private fun java.time.Instant.aTextoRelativo(): String {
 }
 
 private fun Double.formatearAbs(): String = "${"%.1f".format(absoluteValue)}%"
+
+private fun Double.esCambioVisible(): Boolean = absoluteValue >= 0.05
 
 private fun Double.verboCambioPrecio(): String = if (this < 0.0) "bajaron" else "subieron"
 

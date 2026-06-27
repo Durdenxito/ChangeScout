@@ -3,12 +3,15 @@ package com.app.changescout.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.ComponentesCostoImportacion
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ProductoImportado
 import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.usecase.GuardarProductoImportadoUseCase
+import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
 import com.app.changescout.domain.usecase.PrevisualizarCompetenciaUseCase
+import com.app.changescout.ui.navigation.DestinoApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,21 +19,23 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private object FormularioProductoKeys {
-    const val NOMBRE = "form_producto_nombre"
-    const val PRECIO_FOB = "form_producto_precio_fob"
-    const val FLETE = "form_producto_flete"
-    const val SEGURO = "form_producto_seguro"
-    const val ARANCELES = "form_producto_aranceles"
-    const val OTROS_CARGOS = "form_producto_otros_cargos"
-    const val CANTIDAD = "form_producto_cantidad"
-    const val QUERY = "form_producto_query"
+    const val NOMBRE = DestinoApp.ARG_FORM_NOMBRE
+    const val PRECIO_FOB = DestinoApp.ARG_FORM_PRECIO_FOB
+    const val FLETE = DestinoApp.ARG_FORM_FLETE
+    const val SEGURO = DestinoApp.ARG_FORM_SEGURO
+    const val ARANCELES = DestinoApp.ARG_FORM_ARANCELES
+    const val OTROS_CARGOS = DestinoApp.ARG_FORM_OTROS_CARGOS
+    const val CANTIDAD = DestinoApp.ARG_FORM_CANTIDAD
+    const val QUERY = DestinoApp.ARG_FORM_QUERY
 }
 
+@Immutable
 data class EstadoUiFormularioProducto(
     val nombre: String = "",
     val precioFobUsd: String = "",
@@ -44,7 +49,9 @@ data class EstadoUiFormularioProducto(
     val estaPrevisualizando: Boolean = false,
     val previewCompetencia: List<PublicacionPreviewUi> = emptyList(),
     val mensajePreview: String? = null,
-    val mensajeValidacion: String? = null
+    val mensajeValidacion: String? = null,
+    val esEdicion: Boolean = false,
+    val estaCargandoEdicion: Boolean = false
 ) {
     val puedeEnviar: Boolean
         get() = nombre.isNotBlank() &&
@@ -57,6 +64,7 @@ data class EstadoUiFormularioProducto(
         get() = !estaPrevisualizando && (queryCompetencia.isNotBlank() || nombre.isNotBlank())
 }
 
+@Immutable
 data class PublicacionPreviewUi(
     val titulo: String,
     val precio: String,
@@ -85,9 +93,13 @@ sealed interface EfectoFormularioProducto {
 @HiltViewModel
 class ViewModelFormularioProducto @Inject constructor(
     private val guardarProductoImportadoUseCase: GuardarProductoImportadoUseCase,
+    private val observarDetalleProductoUseCase: ObservarDetalleProductoUseCase,
     private val previsualizarCompetenciaUseCase: PrevisualizarCompetenciaUseCase,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    private val productoId: Long = savedStateHandle[DestinoApp.ARG_PRODUCTO_ID] ?: 0L
+    private var productoEditadoPrecargado = false
+
     private val _uiState = MutableStateFlow(
         EstadoUiFormularioProducto(
             nombre = savedStateHandle[FormularioProductoKeys.NOMBRE] ?: "",
@@ -97,13 +109,34 @@ class ViewModelFormularioProducto @Inject constructor(
             arancelesUsd = savedStateHandle[FormularioProductoKeys.ARANCELES] ?: "",
             otrosCargosUsd = savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] ?: "",
             cantidadDisponible = savedStateHandle[FormularioProductoKeys.CANTIDAD] ?: "",
-            queryCompetencia = savedStateHandle[FormularioProductoKeys.QUERY] ?: ""
+            queryCompetencia = savedStateHandle[FormularioProductoKeys.QUERY] ?: "",
+            esEdicion = productoId > 0L,
+            estaCargandoEdicion = productoId > 0L && borradorEstaVacio()
         )
     )
     val uiState: StateFlow<EstadoUiFormularioProducto> = _uiState.asStateFlow()
 
     private val _uiEffect = MutableSharedFlow<EfectoFormularioProducto>()
     val uiEffect: SharedFlow<EfectoFormularioProducto> = _uiEffect.asSharedFlow()
+
+    init {
+        if (productoId > 0L && borradorEstaVacio()) {
+            viewModelScope.launch {
+                val producto = observarDetalleProductoUseCase(productoId).first()
+                if (producto != null && !productoEditadoPrecargado) {
+                    productoEditadoPrecargado = true
+                    cargarProducto(producto)
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            estaCargandoEdicion = false,
+                            mensajeValidacion = "No encontramos la ficha para editar."
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun onEvent(event: EventoFormularioProducto) {
         when (event) {
@@ -246,7 +279,7 @@ class ViewModelFormularioProducto @Inject constructor(
             ?: error("Ingresa una cantidad disponible valida.")
 
         return ProductoImportado(
-            id = 0L,
+            id = productoId,
             nombre = _uiState.value.nombre.trim(),
             queryCompetencia = _uiState.value.queryCompetencia.trim(),
             componentesCosto = ComponentesCostoImportacion(
@@ -272,6 +305,21 @@ class ViewModelFormularioProducto @Inject constructor(
         _uiState.value = EstadoUiFormularioProducto()
     }
 
+    private fun cargarProducto(producto: ProductoImportado) {
+        _uiState.value = EstadoUiFormularioProducto(
+            nombre = producto.nombre,
+            precioFobUsd = producto.componentesCosto.precioFobUsd.toInput(),
+            fleteUsd = producto.componentesCosto.fleteUsd.toInput(),
+            seguroUsd = producto.componentesCosto.seguroUsd.toInput(),
+            arancelesUsd = producto.componentesCosto.arancelesUsd.toInput(),
+            otrosCargosUsd = producto.componentesCosto.otrosCargosUsd.toInput(),
+            cantidadDisponible = producto.cantidadDisponible.toString(),
+            queryCompetencia = producto.queryCompetencia,
+            esEdicion = true,
+            estaCargandoEdicion = false
+        )
+    }
+
     private fun String.parsearMontoUsd(nombreCampo: String): Double {
         return trim()
             .replace(",", ".")
@@ -283,6 +331,21 @@ class ViewModelFormularioProducto @Inject constructor(
         return takeIf { valor -> valor.isNotBlank() }
             ?.parsearMontoUsd("el costo opcional")
             ?: 0.0
+    }
+
+    private fun borradorEstaVacio(): Boolean {
+        return (savedStateHandle[FormularioProductoKeys.NOMBRE] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.PRECIO_FOB] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.FLETE] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.SEGURO] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.ARANCELES] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.CANTIDAD] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.QUERY] ?: "").isBlank()
+    }
+
+    private fun Double.toInput(): String {
+        return if (this == 0.0) "" else toString()
     }
 
     private fun PublicacionMercado.toPreviewUi(): PublicacionPreviewUi {

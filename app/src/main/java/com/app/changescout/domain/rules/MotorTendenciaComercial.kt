@@ -78,7 +78,7 @@ class MotorTendenciaComercial @Inject constructor() {
                     peso = 0.5.pow(antiguedadDias.toDouble() / VIDA_MEDIA_PONDERACION_DIAS)
                 )
             }
-        if (valoresHistoricos.isEmpty()) return null
+        if (valoresHistoricos.size < MINIMO_HISTORIAL_TENDENCIA) return null
 
         val pesoTotal = valoresHistoricos.sumOf { it.peso }
         if (pesoTotal <= 0.0) return null
@@ -103,6 +103,7 @@ class MotorTendenciaComercial @Inject constructor() {
     private companion object {
         const val VENTANA_HISTORICA_MAXIMA_DIAS = 90L
         const val VIDA_MEDIA_PONDERACION_DIAS = 30.0
+        const val MINIMO_HISTORIAL_TENDENCIA = 2
     }
 }
 

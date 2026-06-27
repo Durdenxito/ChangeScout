@@ -46,10 +46,15 @@ class ProveedorMarketplaceBackend @Inject constructor(
                 )
             )
         } catch (error: HttpException) {
+            val mensaje = if (error.code() == 401) {
+                "Tu sesion expiro. Cierra sesion e ingresa nuevamente."
+            } else {
+                "El proxy de marketplace respondio con HTTP ${error.code()}."
+            }
             ResultadoOperacion.Fallo(
                 ErrorOperacion.ProveedorNoDisponible(
                     proveedor = nombreProveedor,
-                    mensaje = "El proxy de marketplace respondio con HTTP ${error.code()}."
+                    mensaje = mensaje
                 )
             )
         } catch (error: IOException) {

@@ -21,13 +21,16 @@ import java.time.Instant
         )
     ],
     indices = [
+        Index(value = ["usuarioId"]),
         Index(value = ["productoId"]),
+        Index(value = ["usuarioId", "productoId"]),
         Index(value = ["productoId", "evaluadoEnEpochMillis"])
     ]
 )
 data class EvaluacionComercialEntity(
     @PrimaryKey(autoGenerate = true)
     val evaluacionId: Long = 0L,
+    val usuarioId: String,
     val productoId: Long,
     val costoTotalUsd: Double?,
     val costoTotalPen: Double?,
@@ -92,9 +95,13 @@ data class EvaluacionComercialEntity(
     }
 
     companion object {
-        fun fromDomain(evaluacion: EvaluacionComercial): EvaluacionComercialEntity {
+        fun fromDomain(
+            evaluacion: EvaluacionComercial,
+            usuarioId: String
+        ): EvaluacionComercialEntity {
             return EvaluacionComercialEntity(
                 evaluacionId = evaluacion.evaluacionId,
+                usuarioId = usuarioId,
                 productoId = evaluacion.productoId,
                 costoTotalUsd = evaluacion.costoTotalUsd,
                 costoTotalPen = evaluacion.costoTotalPen,

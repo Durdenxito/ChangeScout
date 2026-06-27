@@ -92,3 +92,12 @@ class GuardarProductoImportadoUseCase @Inject constructor(
         }
     }
 }
+
+class EliminarProductoImportadoUseCase @Inject constructor(
+    private val repositorioProducto: RepositorioProductoImportado
+) {
+    suspend operator fun invoke(productoId: Long) {
+        require(productoId > 0L) { "Producto no valido para eliminar." }
+        repositorioProducto.eliminar(productoId)
+    }
+}
