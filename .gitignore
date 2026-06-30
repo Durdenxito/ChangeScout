@@ -14,21 +14,23 @@
 /build
 **/build/
 **/bin/
+app/release/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
 Contexto
 docs/
+fuera_apk/
 
 # Secrets
 .env
 .env.*
-!.env.example
 *.key
 *.pem
 *.p12
 *.jks
 secrets.properties
 backend.zip
+*.rar
 *.tmp
