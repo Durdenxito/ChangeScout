@@ -2,6 +2,7 @@ package com.app.changescout.ui.screens.auth
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.outlined.Lock
@@ -51,89 +55,136 @@ fun PantallaSesion(
         Scaffold(
             containerColor = androidx.compose.ui.graphics.Color.Transparent
         ) { innerPadding ->
-            Column(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(PaddingValues(horizontal = 18.dp, vertical = 34.dp)),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LogoChangeScout()
-                Text(
-                    text = "Consulta el mercado. Protege tus evaluaciones.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(48.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    border = BorderStroke(1.dp, OutlineSubtle)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                val horizontal = maxWidth > maxHeight
+                val contentModifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(PaddingValues(horizontal = 18.dp, vertical = 24.dp))
+                if (horizontal) {
+                    Row(
+                        modifier = contentModifier,
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
-                        CampoSesion(
-                            value = state.nombreUsuario,
-                            onValueChange = { value -> onEvent(EventoSesion.NombreUsuarioCambiado(value)) },
-                            placeholder = "Nombre",
-                            leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                        MarcaSesion(modifier = Modifier.weight(1f))
+                        TarjetaSesion(
+                            state = state,
+                            onEvent = onEvent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .widthIn(max = 430.dp)
                         )
-
-                        CampoSesion(
-                            value = state.email,
-                            onValueChange = { value -> onEvent(EventoSesion.EmailCambiado(value)) },
-                            placeholder = "Correo",
-                            leadingIcon = { Icon(Icons.Outlined.Mail, contentDescription = null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-                        )
-
-                        CampoSesion(
-                            value = state.password,
-                            onValueChange = { value -> onEvent(EventoSesion.PasswordCambiado(value)) },
-                            placeholder = "Clave",
-                            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            visualTransformation = PasswordVisualTransformation()
-                        )
-
-                        state.mensaje?.let { mensaje ->
-                            Text(
-                                text = mensaje,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-
-                        BotonPrimario(
-                            texto = "Entrar",
-                            icono = Icons.AutoMirrored.Outlined.Login,
-                            onClick = { onEvent(EventoSesion.IniciarSesion) },
-                            modifier = Modifier.fillMaxWidth(),
-                            cargando = state.estaCargando
-                        )
-
-                        SeparadorSesion()
-
-                        BotonSecundario(
-                            texto = "Crear cuenta",
-                            icono = Icons.Outlined.PersonAdd,
-                            onClick = { onEvent(EventoSesion.CrearCuenta) },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.estaCargando
+                    }
+                } else {
+                    Column(
+                        modifier = contentModifier,
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        MarcaSesion()
+                        Spacer(modifier = Modifier.height(48.dp))
+                        TarjetaSesion(
+                            state = state,
+                            onEvent = onEvent,
+                            modifier = Modifier.widthIn(max = 430.dp)
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MarcaSesion(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        LogoChangeScout()
+        Text(
+            text = "Consulta el mercado. Protege tus evaluaciones.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun TarjetaSesion(
+    state: EstadoUiSesion,
+    onEvent: (EventoSesion) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, OutlineSubtle)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            CampoSesion(
+                value = state.nombreUsuario,
+                onValueChange = { value -> onEvent(EventoSesion.NombreUsuarioCambiado(value)) },
+                placeholder = "Nombre",
+                leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+            )
+
+            CampoSesion(
+                value = state.email,
+                onValueChange = { value -> onEvent(EventoSesion.EmailCambiado(value)) },
+                placeholder = "Correo",
+                leadingIcon = { Icon(Icons.Outlined.Mail, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
+
+            CampoSesion(
+                value = state.password,
+                onValueChange = { value -> onEvent(EventoSesion.PasswordCambiado(value)) },
+                placeholder = "Clave",
+                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation()
+            )
+
+            state.mensaje?.let { mensaje ->
+                Text(
+                    text = mensaje,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            BotonPrimario(
+                texto = "Entrar",
+                icono = Icons.AutoMirrored.Outlined.Login,
+                onClick = { onEvent(EventoSesion.IniciarSesion) },
+                modifier = Modifier.fillMaxWidth(),
+                cargando = state.estaCargando
+            )
+
+            SeparadorSesion()
+
+            BotonSecundario(
+                texto = "Crear cuenta",
+                icono = Icons.Outlined.PersonAdd,
+                onClick = { onEvent(EventoSesion.CrearCuenta) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.estaCargando
+            )
         }
     }
 }

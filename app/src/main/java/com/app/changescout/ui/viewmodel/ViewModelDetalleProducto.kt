@@ -38,6 +38,7 @@ data class EstadoUiDetalleProducto(
 
 sealed interface EventoDetalleProducto {
     data object EvaluarProductoActualSolicitado : EventoDetalleProducto
+    data object HistorialProductoSolicitado : EventoDetalleProducto
     data object EditarProductoSolicitado : EventoDetalleProducto
     data object EliminarProductoSolicitado : EventoDetalleProducto
     data object CancelarEliminacionSolicitada : EventoDetalleProducto
@@ -47,6 +48,8 @@ sealed interface EventoDetalleProducto {
 
 sealed interface EfectoDetalleProducto {
     data object NavegarAtrasDesdeDetalle : EfectoDetalleProducto
+    data object NavegarARadarDesdeDetalle : EfectoDetalleProducto
+    data class NavegarAHistorialProducto(val productoId: Long) : EfectoDetalleProducto
     data class NavegarAEditarProducto(val producto: ProductoImportado) : EfectoDetalleProducto
     data class MostrarMensajeDetalle(val mensaje: String) : EfectoDetalleProducto
 }
@@ -60,6 +63,8 @@ class ViewModelDetalleProducto @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val productoId: Long = savedStateHandle.get<Long>(DestinoApp.ARG_PRODUCTO_ID) ?: 0L
+    private val volverRadarAlActualizar: Boolean =
+        savedStateHandle[DestinoApp.ARG_VOLVER_RADAR_AL_ACTUALIZAR] ?: false
 
     private val _uiState = MutableStateFlow(EstadoUiDetalleProducto())
     val uiState: StateFlow<EstadoUiDetalleProducto> = _uiState.asStateFlow()
@@ -96,6 +101,12 @@ class ViewModelDetalleProducto @Inject constructor(
             when (event) {
                 EventoDetalleProducto.EvaluarProductoActualSolicitado -> {
                     evaluarProductoActual()
+                }
+
+                EventoDetalleProducto.HistorialProductoSolicitado -> {
+                    if (_uiState.value.producto != null) {
+                        _uiEffect.send(EfectoDetalleProducto.NavegarAHistorialProducto(productoId))
+                    }
                 }
 
                 EventoDetalleProducto.EditarProductoSolicitado -> {
@@ -164,6 +175,7 @@ class ViewModelDetalleProducto @Inject constructor(
                         "Lectura actualizada: ${resultado.data.veredicto.aTextoPresentable()}."
                     )
                 )
+                navegarARadarSiCorresponde()
             }
             is ResultadoOperacion.DatosObsoletos -> {
                 _uiEffect.send(
@@ -171,6 +183,7 @@ class ViewModelDetalleProducto @Inject constructor(
                         "Lectura generada con datos obsoletos: ${resultado.causa.mensaje}"
                     )
                 )
+                navegarARadarSiCorresponde()
             }
             is ResultadoOperacion.Fallo -> {
                 _uiState.update { estado ->
@@ -184,6 +197,12 @@ class ViewModelDetalleProducto @Inject constructor(
 
         _uiState.update { estado ->
             estado.copy(estaEvaluando = false)
+        }
+    }
+
+    private suspend fun navegarARadarSiCorresponde() {
+        if (volverRadarAlActualizar) {
+            _uiEffect.send(EfectoDetalleProducto.NavegarARadarDesdeDetalle)
         }
     }
 

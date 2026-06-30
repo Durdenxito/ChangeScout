@@ -9,15 +9,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.QueryStats
@@ -28,7 +28,7 @@ import androidx.compose.material.icons.outlined.Warehouse
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
@@ -116,8 +117,13 @@ private fun ContenidoRadarProductos(
     val filtroActual = remember(filtro) {
         FiltroRadar.valueOf(filtro)
     }
-    val productosFiltrados = remember(state.productos, filtroActual) {
-        state.productos.filter { producto -> filtroActual.acepta(producto) }
+    val productosVigentes = remember(state.productos) {
+        state.productos.filter { producto ->
+            producto.estadoEvaluacion != EstadoEvaluacion.OBSOLETO
+        }
+    }
+    val productosFiltrados = remember(productosVigentes, filtroActual) {
+        productosVigentes.filter { producto -> filtroActual.acepta(producto) }
     }
 
     Scaffold(
@@ -138,12 +144,12 @@ private fun ContenidoRadarProductos(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = onNuevoProducto,
-                shape = RoundedCornerShape(14.dp),
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Nuevo producto") }
-            )
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = "Nuevo producto")
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -155,7 +161,7 @@ private fun ContenidoRadarProductos(
         ) {
             item {
                 PrioridadRadar(
-                    productos = state.productos,
+                    productos = productosVigentes,
                     onNuevoProducto = onNuevoProducto,
                     onFiltroSeleccionado = { filtro = it.name }
                 )
@@ -177,7 +183,7 @@ private fun ContenidoRadarProductos(
                 }
             }
 
-            if (!state.estaCargando && state.productos.isNotEmpty()) {
+            if (!state.estaCargando && productosVigentes.isNotEmpty()) {
                 item {
                     FiltrosRadar(
                         filtroActual = filtroActual,
@@ -201,6 +207,20 @@ private fun ContenidoRadarProductos(
                         EncabezadoSeccion(
                             icono = Icons.Outlined.Inventory2,
                             titulo = "Sin productos"
+                        )
+                    }
+                }
+            } else if (productosVigentes.isEmpty()) {
+                item {
+                    TarjetaOperativa {
+                        EncabezadoSeccion(
+                            icono = Icons.Outlined.Schedule,
+                            titulo = "Sin lecturas al dia"
+                        )
+                        Text(
+                            text = "Tus productos evaluados pasaron a caducidad. Revisalos desde Cuenta.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -257,52 +277,46 @@ private fun PrioridadRadar(
 ) {
     val enRiesgo = productos.count { FiltroRadar.EN_RIESGO.acepta(it) }
     val sinLectura = productos.count { FiltroRadar.SIN_LECTURA.acepta(it) }
-    val saludables = productos.count { it.veredicto == VeredictoComercial.SALUDABLE }
     val prioridad = when {
         productos.isEmpty() -> PrioridadUi(
-            titulo = "Registra tu primer producto",
-            detalle = "Crea una ficha para calcular costo, margen y lectura comercial.",
             accion = "Nuevo producto",
-            icono = Icons.Outlined.Inventory2,
             acento = MaterialTheme.colorScheme.primary,
             onClick = onNuevoProducto
         )
         enRiesgo > 0 -> PrioridadUi(
-            titulo = "Revisa $enRiesgo antes de reponer",
-            detalle = "Hay productos con margen sensible o senales de mercado negativas.",
             accion = "Ver en riesgo",
-            icono = Icons.Outlined.WarningAmber,
             acento = SignalGold,
             onClick = { onFiltroSeleccionado(FiltroRadar.EN_RIESGO) }
         )
         sinLectura > 0 -> PrioridadUi(
-            titulo = "$sinLectura sin lectura comercial",
-            detalle = "Evalua estos productos para saber si conviene mantenerlos.",
             accion = "Ver sin lectura",
-            icono = Icons.AutoMirrored.Outlined.HelpOutline,
             acento = MaterialTheme.colorScheme.primary,
             onClick = { onFiltroSeleccionado(FiltroRadar.SIN_LECTURA) }
         )
         else -> PrioridadUi(
-            titulo = "Inventario sin alertas activas",
-            detalle = "$saludables productos saludables. Agrega otro producto cuando tengas una nueva compra.",
             accion = "Agregar producto",
-            icono = Icons.Outlined.CheckCircle,
             acento = SignalMint,
             onClick = onNuevoProducto
         )
     }
 
     TarjetaOperativa(acento = prioridad.acento) {
-        EncabezadoSeccion(
-            icono = prioridad.icono,
-            titulo = prioridad.titulo
-        )
-        Text(
-            text = prioridad.detalle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = "Status general",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -342,10 +356,7 @@ private fun PrioridadRadar(
 }
 
 private data class PrioridadUi(
-    val titulo: String,
-    val detalle: String,
     val accion: String,
-    val icono: androidx.compose.ui.graphics.vector.ImageVector,
     val acento: androidx.compose.ui.graphics.Color,
     val onClick: () -> Unit
 )

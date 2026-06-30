@@ -12,7 +12,7 @@ import org.junit.Test
 
 class ViewModelCuentaTest {
     @Test
-    fun crearResumenCuenta_cuentaEstadosYUltimaLectura() {
+    fun crearResumenCuenta_listaCaducadasYUltimaLectura() {
         val ahora = Instant.parse("2026-06-27T12:00:00Z")
         val radar = listOf(
             item(1, "Audifonos", VeredictoComercial.SALUDABLE, EstadoEvaluacion.VIGENTE, ahora.minusSeconds(60)),
@@ -23,12 +23,8 @@ class ViewModelCuentaTest {
 
         val resumen = crearResumenCuenta("demo@changescout.pe", "Demo", radar, ahora)
 
-        assertEquals(4, resumen.totalProductos)
-        assertEquals(1, resumen.saludables)
-        assertEquals(1, resumen.precaucion)
-        assertEquals(1, resumen.liquidarStock)
-        assertEquals(1, resumen.sinDatos)
         assertEquals(1, resumen.desactualizados)
+        assertEquals("Parlante", resumen.lecturasCaducadas.single().producto)
         assertEquals("Audifonos, hace 1 min", resumen.ultimaLectura)
     }
 

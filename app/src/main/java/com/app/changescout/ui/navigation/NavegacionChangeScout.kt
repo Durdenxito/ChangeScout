@@ -8,8 +8,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.changescout.ui.screens.account.PantallaCuenta
+import com.app.changescout.ui.screens.account.PantallaLecturasCaducadas
 import com.app.changescout.ui.screens.product.detail.PantallaDetalleProducto
 import com.app.changescout.ui.screens.product.form.PantallaFormularioProducto
+import com.app.changescout.ui.screens.product.history.PantallaHistorialProducto
 import com.app.changescout.ui.screens.radar.PantallaRadarProductos
 
 @Composable
@@ -42,7 +44,24 @@ fun NavegacionChangeScout(
                 onAgregarProducto = {
                     navController.navigateSingleTop(DestinoApp.FORMULARIO_PRODUCTO)
                 },
+                onVerCaducadas = {
+                    navController.navigateSingleTop(DestinoApp.LECTURAS_CADUCADAS)
+                },
                 onCerrarSesion = onCerrarSesion
+            )
+        }
+
+        composable(DestinoApp.LECTURAS_CADUCADAS) {
+            PantallaLecturasCaducadas(
+                onNavegarAtras = { navController.popBackStack() },
+                onNavegarADetalle = { productoId ->
+                    navController.navigateSingleTop(
+                        DestinoApp.rutaDetalle(
+                            productoId = productoId,
+                            volverRadarAlActualizar = true
+                        )
+                    )
+                }
             )
         }
 
@@ -106,11 +125,21 @@ fun NavegacionChangeScout(
             arguments = listOf(
                 navArgument(DestinoApp.ARG_PRODUCTO_ID) {
                     type = NavType.LongType
+                },
+                navArgument(DestinoApp.ARG_VOLVER_RADAR_AL_ACTUALIZAR) {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
         ) {
             PantallaDetalleProducto(
                 onNavegarAtras = { navController.popBackStack() },
+                onNavegarARadar = {
+                    navController.popBackStack(DestinoApp.RADAR_PRODUCTOS, inclusive = false)
+                },
+                onNavegarAHistorial = { productoId ->
+                    navController.navigateSingleTop(DestinoApp.rutaHistorialProducto(productoId))
+                },
                 onNavegarAEditar = { producto ->
                     navController.navigateSingleTop(
                         DestinoApp.rutaEditar(
@@ -127,6 +156,19 @@ fun NavegacionChangeScout(
                         )
                     )
                 }
+            )
+        }
+
+        composable(
+            route = DestinoApp.HISTORIAL_PRODUCTO,
+            arguments = listOf(
+                navArgument(DestinoApp.ARG_PRODUCTO_ID) {
+                    type = NavType.LongType
+                }
+            )
+        ) {
+            PantallaHistorialProducto(
+                onNavegarAtras = { navController.popBackStack() }
             )
         }
     }

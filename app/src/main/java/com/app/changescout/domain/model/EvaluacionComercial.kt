@@ -28,6 +28,23 @@ data class EvaluacionComercial(
             veredicto != null &&
             veredicto != VeredictoComercial.INCONCLUSO
     }
+
+    fun estadoBrechaPrecioSugerido(): EstadoBrechaPrecioSugerido? {
+        val brecha = brechaPrecioSugeridoMercadoPct ?: return null
+        val objetivo = margenObjetivoPct?.takeIf { it > 0.0 } ?: return null
+
+        return when {
+            brecha >= 0.0 -> EstadoBrechaPrecioSugerido.SOBRE_OBJETIVO
+            brecha > -objetivo -> EstadoBrechaPrecioSugerido.BAJO_OBJETIVO_CON_MARGEN
+            else -> EstadoBrechaPrecioSugerido.SIN_MARGEN
+        }
+    }
+}
+
+enum class EstadoBrechaPrecioSugerido {
+    SOBRE_OBJETIVO,
+    BAJO_OBJETIVO_CON_MARGEN,
+    SIN_MARGEN
 }
 
 data class MetricasTendencia(

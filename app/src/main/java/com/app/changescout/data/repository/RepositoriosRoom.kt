@@ -66,6 +66,12 @@ class RepositorioEvaluacionComercialRoom(
             .map { evaluaciones -> evaluaciones.map { it.toDomain() } }
     }
 
+    override fun observarHistorial(productoId: Long, limite: Int): Flow<List<EvaluacionComercial>> {
+        val usuarioId = usuarioIdActual()
+        return evaluacionDao.observarHistorial(usuarioId, productoId, limite)
+            .map { evaluaciones -> evaluaciones.map { it.toDomain() } }
+    }
+
     override suspend fun obtenerHistorial(
         productoId: Long,
         limite: Int

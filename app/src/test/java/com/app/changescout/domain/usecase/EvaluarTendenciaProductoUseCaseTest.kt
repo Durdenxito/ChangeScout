@@ -253,6 +253,17 @@ class EvaluarTendenciaProductoUseCaseTest {
             return flowOf(guardados)
         }
 
+        override fun observarHistorial(
+            productoId: Long,
+            limite: Int
+        ): Flow<List<EvaluacionComercial>> {
+            return flowOf(
+                historial
+                    .filter { it.productoId == productoId }
+                    .take(limite)
+            )
+        }
+
         override suspend fun obtenerHistorial(
             productoId: Long,
             limite: Int
