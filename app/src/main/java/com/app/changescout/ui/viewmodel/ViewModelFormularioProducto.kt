@@ -5,12 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.ComponentesCostoImportacion
-import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ProductoImportado
-import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.usecase.GuardarProductoImportadoUseCase
 import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
-import com.app.changescout.domain.usecase.PrevisualizarCompetenciaUseCase
 import com.app.changescout.ui.navigation.DestinoApp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -32,6 +29,7 @@ private object FormularioProductoKeys {
     const val ARANCELES = DestinoApp.ARG_FORM_ARANCELES
     const val OTROS_CARGOS = DestinoApp.ARG_FORM_OTROS_CARGOS
     const val CANTIDAD = DestinoApp.ARG_FORM_CANTIDAD
+    const val MARGEN_OBJETIVO = DestinoApp.ARG_FORM_MARGEN_OBJETIVO
     const val QUERY = DestinoApp.ARG_FORM_QUERY
 }
 
@@ -44,11 +42,9 @@ data class EstadoUiFormularioProducto(
     val arancelesUsd: String = "",
     val otrosCargosUsd: String = "",
     val cantidadDisponible: String = "",
+    val margenObjetivoPct: String = "20",
     val queryCompetencia: String = "",
     val estaGuardando: Boolean = false,
-    val estaPrevisualizando: Boolean = false,
-    val previewCompetencia: List<PublicacionPreviewUi> = emptyList(),
-    val mensajePreview: String? = null,
     val mensajeValidacion: String? = null,
     val esEdicion: Boolean = false,
     val estaCargandoEdicion: Boolean = false
@@ -57,19 +53,10 @@ data class EstadoUiFormularioProducto(
         get() = nombre.isNotBlank() &&
             precioFobUsd.isNotBlank() &&
             cantidadDisponible.isNotBlank() &&
+            margenObjetivoPct.isNotBlank() &&
             queryCompetencia.isNotBlank() &&
             !estaGuardando
-
-    val puedePrevisualizar: Boolean
-        get() = !estaPrevisualizando && (queryCompetencia.isNotBlank() || nombre.isNotBlank())
 }
-
-@Immutable
-data class PublicacionPreviewUi(
-    val titulo: String,
-    val precio: String,
-    val fuente: String
-)
 
 sealed interface EventoFormularioProducto {
     data class NombreCambiado(val value: String) : EventoFormularioProducto
@@ -79,8 +66,8 @@ sealed interface EventoFormularioProducto {
     data class ArancelesUsdCambiado(val value: String) : EventoFormularioProducto
     data class OtrosCargosUsdCambiado(val value: String) : EventoFormularioProducto
     data class CantidadDisponibleCambiada(val value: String) : EventoFormularioProducto
+    data class MargenObjetivoCambiado(val value: String) : EventoFormularioProducto
     data class QueryCompetenciaCambiado(val value: String) : EventoFormularioProducto
-    data object PrevisualizarCompetenciaSolicitada : EventoFormularioProducto
     data object GuardarProductoSolicitado : EventoFormularioProducto
     data object RegresarDesdeFormularioSolicitado : EventoFormularioProducto
 }
@@ -94,7 +81,6 @@ sealed interface EfectoFormularioProducto {
 class ViewModelFormularioProducto @Inject constructor(
     private val guardarProductoImportadoUseCase: GuardarProductoImportadoUseCase,
     private val observarDetalleProductoUseCase: ObservarDetalleProductoUseCase,
-    private val previsualizarCompetenciaUseCase: PrevisualizarCompetenciaUseCase,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val productoId: Long = savedStateHandle[DestinoApp.ARG_PRODUCTO_ID] ?: 0L
@@ -109,6 +95,7 @@ class ViewModelFormularioProducto @Inject constructor(
             arancelesUsd = savedStateHandle[FormularioProductoKeys.ARANCELES] ?: "",
             otrosCargosUsd = savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] ?: "",
             cantidadDisponible = savedStateHandle[FormularioProductoKeys.CANTIDAD] ?: "",
+            margenObjetivoPct = savedStateHandle[FormularioProductoKeys.MARGEN_OBJETIVO] ?: "20",
             queryCompetencia = savedStateHandle[FormularioProductoKeys.QUERY] ?: "",
             esEdicion = productoId > 0L,
             estaCargandoEdicion = productoId > 0L && borradorEstaVacio()
@@ -147,8 +134,8 @@ class ViewModelFormularioProducto @Inject constructor(
             is EventoFormularioProducto.ArancelesUsdCambiado -> actualizarBorrador(aranceles = event.value)
             is EventoFormularioProducto.OtrosCargosUsdCambiado -> actualizarBorrador(otrosCargos = event.value)
             is EventoFormularioProducto.CantidadDisponibleCambiada -> actualizarBorrador(cantidad = event.value)
+            is EventoFormularioProducto.MargenObjetivoCambiado -> actualizarBorrador(margenObjetivo = event.value)
             is EventoFormularioProducto.QueryCompetenciaCambiado -> actualizarBorrador(query = event.value)
-            EventoFormularioProducto.PrevisualizarCompetenciaSolicitada -> previsualizarCompetencia()
             EventoFormularioProducto.GuardarProductoSolicitado -> guardarProducto()
             EventoFormularioProducto.RegresarDesdeFormularioSolicitado -> {
                 viewModelScope.launch {
@@ -166,6 +153,7 @@ class ViewModelFormularioProducto @Inject constructor(
         aranceles: String? = null,
         otrosCargos: String? = null,
         cantidad: String? = null,
+        margenObjetivo: String? = null,
         query: String? = null
     ) {
         _uiState.update { estado ->
@@ -183,8 +171,8 @@ class ViewModelFormularioProducto @Inject constructor(
                 arancelesUsd = aranceles ?: estado.arancelesUsd,
                 otrosCargosUsd = otrosCargos ?: estado.otrosCargosUsd,
                 cantidadDisponible = cantidad ?: estado.cantidadDisponible,
+                margenObjetivoPct = margenObjetivo ?: estado.margenObjetivoPct,
                 queryCompetencia = nuevoQuery,
-                mensajePreview = null,
                 mensajeValidacion = null
             )
         }
@@ -195,54 +183,8 @@ class ViewModelFormularioProducto @Inject constructor(
         savedStateHandle[FormularioProductoKeys.ARANCELES] = _uiState.value.arancelesUsd
         savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] = _uiState.value.otrosCargosUsd
         savedStateHandle[FormularioProductoKeys.CANTIDAD] = _uiState.value.cantidadDisponible
+        savedStateHandle[FormularioProductoKeys.MARGEN_OBJETIVO] = _uiState.value.margenObjetivoPct
         savedStateHandle[FormularioProductoKeys.QUERY] = _uiState.value.queryCompetencia
-    }
-
-    private fun previsualizarCompetencia() {
-        viewModelScope.launch {
-            val query = _uiState.value.queryCompetencia.ifBlank { _uiState.value.nombre }.trim()
-            _uiState.update {
-                it.copy(
-                    estaPrevisualizando = true,
-                    previewCompetencia = emptyList(),
-                    mensajePreview = null
-                )
-            }
-
-            when (val resultado = previsualizarCompetenciaUseCase(query)) {
-                is ResultadoOperacion.Exito -> {
-                    _uiState.update {
-                        it.copy(
-                            estaPrevisualizando = false,
-                            previewCompetencia = resultado.data.map { publicacion -> publicacion.toPreviewUi() },
-                            mensajePreview = if (resultado.data.isEmpty()) {
-                                "No se encontraron publicaciones para esa busqueda."
-                            } else {
-                                null
-                            }
-                        )
-                    }
-                }
-                is ResultadoOperacion.DatosObsoletos -> {
-                    _uiState.update {
-                        it.copy(
-                            estaPrevisualizando = false,
-                            previewCompetencia = resultado.data.map { publicacion -> publicacion.toPreviewUi() },
-                            mensajePreview = "Se muestran resultados guardados porque el mercado en vivo no respondio."
-                        )
-                    }
-                }
-                is ResultadoOperacion.Fallo -> {
-                    _uiState.update {
-                        it.copy(
-                            estaPrevisualizando = false,
-                            previewCompetencia = emptyList(),
-                            mensajePreview = resultado.error.mensaje
-                        )
-                    }
-                }
-            }
-        }
     }
 
     private fun guardarProducto() {
@@ -277,6 +219,7 @@ class ViewModelFormularioProducto @Inject constructor(
         val otrosCargos = _uiState.value.otrosCargosUsd.parsearMontoUsdOpcional()
         val cantidad = _uiState.value.cantidadDisponible.trim().toIntOrNull()
             ?: error("Ingresa una cantidad disponible valida.")
+        val margenObjetivo = _uiState.value.margenObjetivoPct.parsearPorcentajeMargen()
 
         return ProductoImportado(
             id = productoId,
@@ -289,7 +232,8 @@ class ViewModelFormularioProducto @Inject constructor(
                 arancelesUsd = aranceles,
                 otrosCargosUsd = otrosCargos
             ),
-            cantidadDisponible = cantidad
+            cantidadDisponible = cantidad,
+            margenObjetivoPct = margenObjetivo
         )
     }
 
@@ -301,6 +245,7 @@ class ViewModelFormularioProducto @Inject constructor(
         savedStateHandle[FormularioProductoKeys.ARANCELES] = ""
         savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] = ""
         savedStateHandle[FormularioProductoKeys.CANTIDAD] = ""
+        savedStateHandle[FormularioProductoKeys.MARGEN_OBJETIVO] = "20"
         savedStateHandle[FormularioProductoKeys.QUERY] = ""
         _uiState.value = EstadoUiFormularioProducto()
     }
@@ -314,6 +259,7 @@ class ViewModelFormularioProducto @Inject constructor(
             arancelesUsd = producto.componentesCosto.arancelesUsd.toInput(),
             otrosCargosUsd = producto.componentesCosto.otrosCargosUsd.toInput(),
             cantidadDisponible = producto.cantidadDisponible.toString(),
+            margenObjetivoPct = producto.margenObjetivoPct.toPercentInput(),
             queryCompetencia = producto.queryCompetencia,
             esEdicion = true,
             estaCargandoEdicion = false
@@ -325,6 +271,17 @@ class ViewModelFormularioProducto @Inject constructor(
             .replace(",", ".")
             .toDoubleOrNull()
             ?: error("Ingresa un monto USD valido para $nombreCampo.")
+    }
+
+    private fun String.parsearPorcentajeMargen(): Double {
+        val margen = trim()
+            .replace(",", ".")
+            .toDoubleOrNull()
+            ?: error("Ingresa un margen objetivo valido.")
+        require(margen > 0.0 && margen < 100.0) {
+            "El margen objetivo debe estar entre 0 y 100."
+        }
+        return margen
     }
 
     private fun String.parsearMontoUsdOpcional(): Double {
@@ -341,6 +298,7 @@ class ViewModelFormularioProducto @Inject constructor(
             (savedStateHandle[FormularioProductoKeys.ARANCELES] ?: "").isBlank() &&
             (savedStateHandle[FormularioProductoKeys.OTROS_CARGOS] ?: "").isBlank() &&
             (savedStateHandle[FormularioProductoKeys.CANTIDAD] ?: "").isBlank() &&
+            (savedStateHandle[FormularioProductoKeys.MARGEN_OBJETIVO] ?: "").let { it.isBlank() || it == "20" } &&
             (savedStateHandle[FormularioProductoKeys.QUERY] ?: "").isBlank()
     }
 
@@ -348,17 +306,7 @@ class ViewModelFormularioProducto @Inject constructor(
         return if (this == 0.0) "" else toString()
     }
 
-    private fun PublicacionMercado.toPreviewUi(): PublicacionPreviewUi {
-        val simboloMoneda = when (moneda.name) {
-            "PEN" -> "S/"
-            "USD" -> "USD"
-            else -> moneda.name
-        }
-
-        return PublicacionPreviewUi(
-            titulo = titulo,
-            precio = "$simboloMoneda ${"%.2f".format(precio)}",
-            fuente = nombreFuente
-        )
+    private fun Double.toPercentInput(): String {
+        return if (this % 1.0 == 0.0) toInt().toString() else toString()
     }
 }

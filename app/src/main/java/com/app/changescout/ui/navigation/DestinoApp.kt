@@ -16,6 +16,7 @@ object DestinoApp {
     const val ARG_FORM_ARANCELES = "arancelesUsd"
     const val ARG_FORM_OTROS_CARGOS = "otrosCargosUsd"
     const val ARG_FORM_CANTIDAD = "cantidadDisponible"
+    const val ARG_FORM_MARGEN_OBJETIVO = "margenObjetivoPct"
     const val ARG_FORM_QUERY = "queryCompetencia"
     const val FORMULARIO_PRODUCTO_EDICION = "$FORMULARIO_PRODUCTO_BASE/{$ARG_PRODUCTO_ID}" +
         "?$ARG_FORM_NOMBRE={$ARG_FORM_NOMBRE}" +
@@ -25,6 +26,7 @@ object DestinoApp {
         "&$ARG_FORM_ARANCELES={$ARG_FORM_ARANCELES}" +
         "&$ARG_FORM_OTROS_CARGOS={$ARG_FORM_OTROS_CARGOS}" +
         "&$ARG_FORM_CANTIDAD={$ARG_FORM_CANTIDAD}" +
+        "&$ARG_FORM_MARGEN_OBJETIVO={$ARG_FORM_MARGEN_OBJETIVO}" +
         "&$ARG_FORM_QUERY={$ARG_FORM_QUERY}"
     const val DETALLE_PRODUCTO = "$DETALLE_PRODUCTO_BASE/{$ARG_PRODUCTO_ID}"
 
@@ -37,6 +39,7 @@ object DestinoApp {
         arancelesUsd: String = "",
         otrosCargosUsd: String = "",
         cantidadDisponible: String = "",
+        margenObjetivoPct: String = "20",
         queryCompetencia: String = ""
     ): String {
         return "$FORMULARIO_PRODUCTO_BASE/$productoId" +
@@ -47,6 +50,7 @@ object DestinoApp {
             "&$ARG_FORM_ARANCELES=${arancelesUsd.url()}" +
             "&$ARG_FORM_OTROS_CARGOS=${otrosCargosUsd.url()}" +
             "&$ARG_FORM_CANTIDAD=${cantidadDisponible.url()}" +
+            "&$ARG_FORM_MARGEN_OBJETIVO=${margenObjetivoPct.url()}" +
             "&$ARG_FORM_QUERY=${queryCompetencia.url()}"
     }
 

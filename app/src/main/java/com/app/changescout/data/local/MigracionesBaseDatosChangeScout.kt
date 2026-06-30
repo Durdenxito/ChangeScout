@@ -132,4 +132,10 @@ object MigracionesBaseDatosChangeScout {
             )
         }
     }
+
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE productos_importados ADD COLUMN margenObjetivoPct REAL NOT NULL DEFAULT 20.0")
+        }
+    }
 }

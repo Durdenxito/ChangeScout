@@ -22,6 +22,7 @@ data class ProductoImportadoEntity(
     val arancelesUsd: Double,
     val otrosCargosUsd: Double,
     val cantidadDisponible: Int,
+    val margenObjetivoPct: Double,
     val notas: String?
 ) {
     fun toDomain(): ProductoImportado {
@@ -37,6 +38,7 @@ data class ProductoImportadoEntity(
                 otrosCargosUsd = otrosCargosUsd
             ),
             cantidadDisponible = cantidadDisponible,
+            margenObjetivoPct = margenObjetivoPct,
             notas = notas
         )
     }
@@ -54,6 +56,7 @@ data class ProductoImportadoEntity(
                 arancelesUsd = producto.componentesCosto.arancelesUsd,
                 otrosCargosUsd = producto.componentesCosto.otrosCargosUsd,
                 cantidadDisponible = producto.cantidadDisponible,
+                margenObjetivoPct = producto.margenObjetivoPct,
                 notas = producto.notas
             )
         }

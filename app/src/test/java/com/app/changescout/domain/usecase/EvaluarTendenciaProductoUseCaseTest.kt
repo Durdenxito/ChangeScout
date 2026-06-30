@@ -97,6 +97,21 @@ class EvaluarTendenciaProductoUseCaseTest {
     }
 
     @Test
+    fun invoke_usaMargenObjetivoDelProducto() = runBlocking {
+        repositorioProducto = FakeRepositorioProductoImportado(
+            productoBase(margenObjetivoPct = 25.0)
+        )
+
+        val resultado = crearUseCase().invoke(productoId = 7L)
+
+        assertTrue(resultado is ResultadoOperacion.Exito)
+        val evaluacion = (resultado as ResultadoOperacion.Exito).data
+        assertEquals(25.0, evaluacion.margenObjetivoPct ?: 0.0, 0.0001)
+        assertEquals(640.0, evaluacion.precioVentaSugeridoPen ?: 0.0, 0.0001)
+    }
+
+
+    @Test
     fun invoke_siMarketplaceFalla_retornaFalloYSinguardarEvaluacion() = runBlocking {
         val error = ErrorOperacion.Timeout(
             proveedor = "market-test",
@@ -147,7 +162,7 @@ class EvaluarTendenciaProductoUseCaseTest {
         )
     }
 
-    private fun productoBase(): ProductoImportado {
+    private fun productoBase(margenObjetivoPct: Double = 20.0): ProductoImportado {
         return ProductoImportado(
             id = 7L,
             nombre = "Consola portatil",
@@ -158,7 +173,8 @@ class EvaluarTendenciaProductoUseCaseTest {
                 seguroUsd = 5.0,
                 arancelesUsd = 5.0
             ),
-            cantidadDisponible = 12
+            cantidadDisponible = 12,
+            margenObjetivoPct = margenObjetivoPct
         )
     }
 

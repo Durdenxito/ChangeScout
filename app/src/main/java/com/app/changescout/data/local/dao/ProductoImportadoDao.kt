@@ -34,6 +34,7 @@ interface ProductoImportadoDao {
                 arancelesUsd = producto.arancelesUsd,
                 otrosCargosUsd = producto.otrosCargosUsd,
                 cantidadDisponible = producto.cantidadDisponible,
+                margenObjetivoPct = producto.margenObjetivoPct,
                 notas = producto.notas
             )
             check(actualizados == 1) { "No se pudo actualizar el producto de esta sesion." }
@@ -55,6 +56,7 @@ interface ProductoImportadoDao {
             arancelesUsd = :arancelesUsd,
             otrosCargosUsd = :otrosCargosUsd,
             cantidadDisponible = :cantidadDisponible,
+            margenObjetivoPct = :margenObjetivoPct,
             notas = :notas
         WHERE id = :id AND usuarioId = :usuarioId
         """
@@ -70,6 +72,7 @@ interface ProductoImportadoDao {
         arancelesUsd: Double,
         otrosCargosUsd: Double,
         cantidadDisponible: Int,
+        margenObjetivoPct: Double,
         notas: String?
     ): Int
 

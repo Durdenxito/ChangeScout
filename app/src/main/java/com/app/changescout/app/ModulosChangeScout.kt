@@ -145,7 +145,8 @@ object ModulosChangeScout {
                 MigracionesBaseDatosChangeScout.MIGRATION_1_2,
                 MigracionesBaseDatosChangeScout.MIGRATION_2_3,
                 MigracionesBaseDatosChangeScout.MIGRATION_3_4,
-                MigracionesBaseDatosChangeScout.MIGRATION_4_5
+                MigracionesBaseDatosChangeScout.MIGRATION_4_5,
+                MigracionesBaseDatosChangeScout.MIGRATION_5_6
             )
             .build()
     }

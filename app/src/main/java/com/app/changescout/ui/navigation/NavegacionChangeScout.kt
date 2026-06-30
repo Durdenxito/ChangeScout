@@ -86,6 +86,10 @@ fun NavegacionChangeScout(
                     type = NavType.StringType
                     defaultValue = ""
                 },
+                navArgument(DestinoApp.ARG_FORM_MARGEN_OBJETIVO) {
+                    type = NavType.StringType
+                    defaultValue = "20"
+                },
                 navArgument(DestinoApp.ARG_FORM_QUERY) {
                     type = NavType.StringType
                     defaultValue = ""
@@ -118,6 +122,7 @@ fun NavegacionChangeScout(
                             arancelesUsd = producto.componentesCosto.arancelesUsd.toInput(),
                             otrosCargosUsd = producto.componentesCosto.otrosCargosUsd.toInput(),
                             cantidadDisponible = producto.cantidadDisponible.toString(),
+                            margenObjetivoPct = producto.margenObjetivoPct.toPercentInput(),
                             queryCompetencia = producto.queryCompetencia
                         )
                     )
@@ -129,6 +134,10 @@ fun NavegacionChangeScout(
 
 private fun Double.toInput(): String {
     return if (this == 0.0) "" else toString()
+}
+
+private fun Double.toPercentInput(): String {
+    return if (this % 1.0 == 0.0) toInt().toString() else toString()
 }
 
 private fun NavHostController.navigateSingleTop(route: String) {

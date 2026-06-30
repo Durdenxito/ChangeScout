@@ -2,7 +2,6 @@ package com.app.changescout.ui.screens.product.form
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +15,7 @@ import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Numbers
+import androidx.compose.material.icons.outlined.Percent
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,14 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.changescout.ui.screens.components.BotonPrimario
-import com.app.changescout.ui.screens.components.BotonSecundario
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
 import com.app.changescout.ui.screens.components.FondoOperativo
 import com.app.changescout.ui.screens.components.TarjetaOperativa
 import com.app.changescout.ui.viewmodel.EfectoFormularioProducto
 import com.app.changescout.ui.viewmodel.EstadoUiFormularioProducto
 import com.app.changescout.ui.viewmodel.EventoFormularioProducto
-import com.app.changescout.ui.viewmodel.PublicacionPreviewUi
 import com.app.changescout.ui.viewmodel.ViewModelFormularioProducto
 
 @Composable
@@ -182,6 +180,13 @@ private fun ContenidoFormularioProducto(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     leadingIcon = { Icon(Icons.Outlined.Numbers, contentDescription = null) }
                 )
+                CampoOperativo(
+                    value = state.margenObjetivoPct,
+                    onValueChange = { onEvent(EventoFormularioProducto.MargenObjetivoCambiado(it)) },
+                    label = "Margen de ganancia objetivo (%)",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    leadingIcon = { Icon(Icons.Outlined.Percent, contentDescription = null) }
+                )
             }
 
             TarjetaOperativa {
@@ -195,18 +200,6 @@ private fun ContenidoFormularioProducto(
                     label = "Producto a buscar en el mercado",
                     minLines = 3,
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
-                )
-                BotonSecundario(
-                    texto = if (state.estaPrevisualizando) "Buscando..." else "Probar busqueda",
-                    icono = Icons.Outlined.Search,
-                    onClick = { onEvent(EventoFormularioProducto.PrevisualizarCompetenciaSolicitada) },
-                    enabled = state.puedePrevisualizar,
-                    modifier = Modifier.fillMaxWidth(),
-                    cargando = state.estaPrevisualizando
-                )
-                PreviewCompetencia(
-                    publicaciones = state.previewCompetencia,
-                    mensaje = state.mensajePreview
                 )
             }
 
@@ -235,46 +228,6 @@ private fun ContenidoFormularioProducto(
                 modifier = Modifier.fillMaxWidth(),
                 cargando = state.estaGuardando
             )
-        }
-    }
-}
-
-@Composable
-private fun PreviewCompetencia(
-    publicaciones: List<PublicacionPreviewUi>,
-    mensaje: String?
-) {
-    if (mensaje == null && publicaciones.isEmpty()) return
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        mensaje?.let { texto ->
-            Text(
-                text = texto,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        publicaciones.forEach { publicacion ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = publicacion.titulo,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = publicacion.precio,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
         }
     }
 }

@@ -106,8 +106,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             costoTotalUsd = costoTotalUsd,
             tipoCambioVentaUsdPen = cotizacion.tasaVentaUsdPen
         )
-        // ponytail: margen fijo por ahora; hacerlo editable cuando exista una necesidad real por producto.
-        val margenObjetivoPct = MARGEN_OBJETIVO_PCT
+        val margenObjetivoPct = producto.margenObjetivoPct
         val precioVentaSugeridoPen = calculadoraLandedCost.calcularPrecioVentaSugeridoPen(
             costoTotalPen = costoTotalPen,
             margenObjetivoPct = margenObjetivoPct
@@ -227,7 +226,6 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
     private companion object {
         const val LIMITE_PUBLICACIONES_MERCADO = 5
         const val LIMITE_HISTORIAL_TENDENCIA = 12
-        const val MARGEN_OBJETIVO_PCT = 20.0
         const val VERSION_ALGORITMO = "trend-v1"
     }
 }

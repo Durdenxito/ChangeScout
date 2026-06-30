@@ -13,12 +13,15 @@ data class ProductoImportado(
     val queryCompetencia: String,
     val componentesCosto: ComponentesCostoImportacion,
     val cantidadDisponible: Int,
+    val margenObjetivoPct: Double = 20.0,
     val notas: String? = null
 ) {
     fun estaListoParaEvaluacion(): Boolean {
         return nombre.isNotBlank() &&
             queryCompetencia.isNotBlank() &&
             cantidadDisponible > 0 &&
+            margenObjetivoPct > 0.0 &&
+            margenObjetivoPct < 100.0 &&
             componentesCosto.tieneValoresValidos()
     }
 }
