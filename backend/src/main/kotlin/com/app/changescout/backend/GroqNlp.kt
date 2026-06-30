@@ -37,36 +37,34 @@ fun Route.nlpRoutes(nlp: NlpFiltroService) {
         try {
             call.respond(nlp.filtrar(request))
         } catch (error: NlpConfigException) {
-            call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse(error.message))
+            call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                ErrorResponse("El filtro inteligente no esta disponible ahora.")
+            )
         } catch (error: NlpRespuestaInvalidaException) {
-            call.respond(HttpStatusCode.BadGateway, ErrorResponse(error.message))
+            call.respond(
+                HttpStatusCode.BadGateway,
+                ErrorResponse("El filtro inteligente no pudo procesar esta lectura. Intenta nuevamente en unos minutos.")
+            )
         } catch (error: HttpRequestTimeoutException) {
             call.respond(
                 HttpStatusCode.GatewayTimeout,
-                ErrorResponse("${nlp.nombreProveedor} no respondio a tiempo.")
+                ErrorResponse("El filtro inteligente esta demorando demasiado. Intenta nuevamente en unos minutos.")
             )
         } catch (error: ClientRequestException) {
-            val detail = error.response.externalErrorDetail()
             call.respond(
                 HttpStatusCode.BadGateway,
-                ErrorResponse(
-                    "${nlp.nombreProveedor} rechazo la solicitud con HTTP " +
-                        "${error.response.status.value}.$detail"
-                )
+                ErrorResponse("El filtro inteligente no acepto esta lectura. Intenta nuevamente en unos minutos.")
             )
         } catch (error: ServerResponseException) {
-            val detail = error.response.externalErrorDetail()
             call.respond(
                 HttpStatusCode.BadGateway,
-                ErrorResponse(
-                    "${nlp.nombreProveedor} fallo con HTTP " +
-                        "${error.response.status.value}.$detail"
-                )
+                ErrorResponse("El filtro inteligente no esta disponible ahora. Intenta nuevamente en unos minutos.")
             )
         } catch (error: IOException) {
             call.respond(
                 HttpStatusCode.BadGateway,
-                ErrorResponse("No se pudo conectar con ${nlp.nombreProveedor}.")
+                ErrorResponse("No se pudo conectar con el filtro inteligente. Intenta nuevamente en unos minutos.")
             )
         }
     }
@@ -94,7 +92,7 @@ data class NlpConfig(
                 model = System.getenv("GROQ_MODEL") ?: "gpt-oss-20b",
                 baseUrl = System.getenv("GROQ_BASE_URL") ?: "https://api.groq.com/openai/v1",
                 timeoutMillis = envLongOrDefault("GROQ_TIMEOUT_MS", "NLP_TIMEOUT_MS", 60_000L),
-                maxPublicaciones = envIntOrDefault("GROQ_NLP_MAX_PUBLICACIONES", "NLP_MAX_PUBLICACIONES", 10)
+                maxPublicaciones = envIntOrDefault("GROQ_NLP_MAX_PUBLICACIONES", "NLP_MAX_PUBLICACIONES", 15)
                     .coerceIn(1, 20)
             )
         }

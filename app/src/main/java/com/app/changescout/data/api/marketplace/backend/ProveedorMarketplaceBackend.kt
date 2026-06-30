@@ -5,6 +5,8 @@ import com.app.changescout.domain.model.ErrorOperacion
 import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.repository.ProveedorMarketplace
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import java.io.IOException
 import java.net.SocketTimeoutException
 import javax.inject.Inject
@@ -42,14 +44,14 @@ class ProveedorMarketplaceBackend @Inject constructor(
             ResultadoOperacion.Fallo(
                 ErrorOperacion.Timeout(
                     proveedor = nombreProveedor,
-                    mensaje = "El proxy de marketplace no respondio dentro del tiempo esperado."
+                    mensaje = "El marketplace esta demorando por consultas repetidas. Prueba otro producto o intenta de nuevo mas tarde."
                 )
             )
         } catch (error: HttpException) {
             val mensaje = if (error.code() == 401) {
                 "Tu sesion expiro. Cierra sesion e ingresa nuevamente."
             } else {
-                "El proxy de marketplace respondio con HTTP ${error.code()}."
+                error.mensajeProxy() ?: "El proxy de marketplace respondio con HTTP ${error.code()}."
             }
             ResultadoOperacion.Fallo(
                 ErrorOperacion.ProveedorNoDisponible(
@@ -73,4 +75,18 @@ class ProveedorMarketplaceBackend @Inject constructor(
             )
         }
     }
+
+    private fun HttpException.mensajeProxy(): String? {
+        val body = response()?.errorBody()?.string() ?: return null
+        return runCatching {
+            Gson().fromJson(body, BackendErrorDto::class.java)
+                ?.message
+                ?.takeIf { mensaje -> mensaje.isNotBlank() }
+        }.getOrNull()
+    }
 }
+
+private data class BackendErrorDto(
+    @SerializedName("message")
+    val message: String?
+)

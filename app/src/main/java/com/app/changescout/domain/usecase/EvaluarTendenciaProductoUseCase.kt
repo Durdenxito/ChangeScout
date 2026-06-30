@@ -224,7 +224,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
     }
 
     private companion object {
-        const val LIMITE_PUBLICACIONES_MERCADO = 5
+        const val LIMITE_PUBLICACIONES_MERCADO = 15
         const val LIMITE_HISTORIAL_TENDENCIA = 12
         const val VERSION_ALGORITMO = "trend-v1"
     }

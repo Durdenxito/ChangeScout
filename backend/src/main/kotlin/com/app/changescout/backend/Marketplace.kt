@@ -48,23 +48,32 @@ fun Route.marketplaceRoutes(
         try {
             call.respond(marketplace.buscar(query = query, country = country.uppercase(), limit = limit))
         } catch (error: ApifyConfigException) {
-            call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse(error.message))
+            call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                ErrorResponse("El buscador de marketplace no esta disponible ahora.")
+            )
+        } catch (error: ApifyActorException) {
+            call.respond(HttpStatusCode.BadGateway, ErrorResponse(error.message))
         } catch (error: HttpRequestTimeoutException) {
-            call.respond(HttpStatusCode.GatewayTimeout, ErrorResponse("Apify no respondio a tiempo."))
+            call.respond(
+                HttpStatusCode.GatewayTimeout,
+                ErrorResponse("El marketplace esta demorando por consultas repetidas. Prueba otro producto o intenta de nuevo mas tarde.")
+            )
         } catch (error: ClientRequestException) {
-            val detail = error.response.externalErrorDetail()
             call.respond(
                 HttpStatusCode.BadGateway,
-                ErrorResponse("Apify rechazo la solicitud con HTTP ${error.response.status.value}.$detail")
+                ErrorResponse("El marketplace no acepto esta busqueda. Prueba con otro nombre de producto.")
             )
         } catch (error: ServerResponseException) {
-            val detail = error.response.externalErrorDetail()
             call.respond(
                 HttpStatusCode.BadGateway,
-                ErrorResponse("Apify fallo con HTTP ${error.response.status.value}.$detail")
+                ErrorResponse("El marketplace no esta disponible ahora. Intenta nuevamente en unos minutos.")
             )
         } catch (error: IOException) {
-            call.respond(HttpStatusCode.BadGateway, ErrorResponse("No se pudo conectar con Apify."))
+            call.respond(
+                HttpStatusCode.BadGateway,
+                ErrorResponse("No se pudo conectar con el marketplace. Intenta nuevamente en unos minutos.")
+            )
         }
     }
 }
@@ -88,8 +97,8 @@ data class ApifyConfig(
                 actorId = System.getenv("APIFY_ACTOR_ID")
                     ?: "scrapers_lat/mercadolibre-scraper",
                 timeoutMillis = System.getenv("APIFY_TIMEOUT_MS")?.toLongOrNull() ?: 180_000L,
-                maxItems = System.getenv("MARKETPLACE_MAX_ITEMS")?.toIntOrNull()?.coerceIn(1, 5)
-                    ?: 5,
+                maxItems = System.getenv("MARKETPLACE_MAX_ITEMS")?.toIntOrNull()?.coerceIn(1, 15)
+                    ?: 15,
                 proxyGroups = System.getenv("APIFY_PROXY_GROUPS")
                     ?.split(",")
                     ?.map { value -> value.trim() }
@@ -128,8 +137,18 @@ class ApifyMarketplaceService(
             setBody(input)
         }.body<List<ApifyProductoDto>>()
 
-        return items.mapNotNull { item -> item.toPublicacionResponse() }
+        return items.toMarketplacePublicaciones()
     }
+}
+
+internal fun List<ApifyProductoDto>.toMarketplacePublicaciones(): List<MarketplacePublicacionResponse> {
+    val publicaciones = mapNotNull { item -> item.toPublicacionResponse() }
+    val errores = mapNotNull { item -> item.error?.trim()?.takeIf { error -> error.isNotBlank() } }
+        .distinct()
+    if (publicaciones.isEmpty() && errores.isNotEmpty()) {
+        throw ApifyActorException("MercadoLibre limito esta busqueda temporalmente. Prueba otro producto o intenta de nuevo mas tarde.")
+    }
+    return publicaciones
 }
 
 data class ApifySearchInput(
@@ -182,6 +201,10 @@ data class MarketplacePublicacionResponse(
 )
 
 class ApifyConfigException(
+    override val message: String
+) : RuntimeException(message)
+
+class ApifyActorException(
     override val message: String
 ) : RuntimeException(message)
 

@@ -7,5 +7,5 @@ object BackendProxyConfig {
     const val NOMBRE_PROVEEDOR_MARKETPLACE = "ChangeScout Marketplace Proxy"
     const val NOMBRE_PROVEEDOR_NLP = "ChangeScout NLP Proxy"
     const val PAIS_PERU = "PE"
-    const val LIMITE_MAXIMO_BUSQUEDA = 5
+    const val LIMITE_MAXIMO_BUSQUEDA = 15
 }

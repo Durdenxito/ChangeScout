@@ -7,6 +7,8 @@ import com.app.changescout.domain.model.PublicacionMercado
 import com.app.changescout.domain.model.ResultadoFiltroNlp
 import com.app.changescout.domain.model.ResultadoOperacion
 import com.app.changescout.domain.repository.ProveedorFiltroNlp
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import java.io.IOException
 import java.net.SocketTimeoutException
 import javax.inject.Inject
@@ -40,14 +42,14 @@ class ProveedorFiltroNlpBackend @Inject constructor(
             ResultadoOperacion.Fallo(
                 ErrorOperacion.Timeout(
                     proveedor = nombreProveedor,
-                    mensaje = "El proxy NLP no respondio dentro del tiempo esperado."
+                    mensaje = "El filtro inteligente esta demorando demasiado. Intenta nuevamente en unos minutos."
                 )
             )
         } catch (error: HttpException) {
             val mensaje = if (error.code() == 401) {
                 "Tu sesion expiro. Cierra sesion e ingresa nuevamente."
             } else {
-                "El proxy NLP respondio con HTTP ${error.code()}."
+                error.mensajeProxy() ?: "El filtro inteligente no pudo procesar la lectura. Intenta nuevamente en unos minutos."
             }
             ResultadoOperacion.Fallo(
                 ErrorOperacion.ProveedorNoDisponible(
@@ -72,6 +74,15 @@ class ProveedorFiltroNlpBackend @Inject constructor(
         }
     }
 
+    private fun HttpException.mensajeProxy(): String? {
+        val body = response()?.errorBody()?.string() ?: return null
+        return runCatching {
+            Gson().fromJson(body, BackendErrorDto::class.java)
+                ?.message
+                ?.takeIf { mensaje -> mensaje.isNotBlank() }
+        }.getOrNull()
+    }
+
     private fun resultadoVacio(): ResultadoFiltroNlp {
         return ResultadoFiltroNlp(
             publicacionesValidas = emptyList(),
@@ -84,3 +95,8 @@ class ProveedorFiltroNlpBackend @Inject constructor(
         )
     }
 }
+
+private data class BackendErrorDto(
+    @SerializedName("message")
+    val message: String?
+)
