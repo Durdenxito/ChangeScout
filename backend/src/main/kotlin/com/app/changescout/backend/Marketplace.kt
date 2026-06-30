@@ -24,10 +24,10 @@ fun Route.marketplaceRoutes(
 ) {
     get("/marketplace/search") {
         val query = call.request.queryParameters["query"]?.trim().orEmpty()
-        if (query.isBlank()) {
+        if (query.isBlank() || query.length > MAX_QUERY_CHARS || query.any { char -> char.isISOControl() }) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorResponse("El query de competencia no puede estar vacio.")
+                ErrorResponse("El query de competencia no tiene un formato valido.")
             )
             return@get
         }
@@ -40,9 +40,13 @@ fun Route.marketplaceRoutes(
             ?.trim()
             ?.takeIf { value -> value.isNotBlank() }
             ?: "PE"
+        if (!COUNTRY_REGEX.matches(country)) {
+            call.respond(HttpStatusCode.BadRequest, ErrorResponse("El pais debe usar codigo ISO de 2 letras."))
+            return@get
+        }
 
         try {
-            call.respond(marketplace.buscar(query = query, country = country, limit = limit))
+            call.respond(marketplace.buscar(query = query, country = country.uppercase(), limit = limit))
         } catch (error: ApifyConfigException) {
             call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse(error.message))
         } catch (error: HttpRequestTimeoutException) {
@@ -64,6 +68,9 @@ fun Route.marketplaceRoutes(
         }
     }
 }
+
+private const val MAX_QUERY_CHARS = 80
+private val COUNTRY_REGEX = Regex("^[A-Za-z]{2}$")
 
 data class ApifyConfig(
     val token: String?,

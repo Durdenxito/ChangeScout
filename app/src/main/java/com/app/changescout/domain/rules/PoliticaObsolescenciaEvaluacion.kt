@@ -13,11 +13,8 @@ class PoliticaObsolescenciaEvaluacion @Inject constructor(
         evaluadoEn: Instant,
         now: Instant
     ): Boolean {
-        require(!now.isBefore(evaluadoEn)) {
-            "La fecha actual no puede ser anterior a la evaluacion."
-        }
-
-        return Duration.between(evaluadoEn, now) <= ventanaVigencia
+        val antiguedad = Duration.between(evaluadoEn, now).coerceAtLeast(Duration.ZERO)
+        return antiguedad <= ventanaVigencia
     }
 
     fun resolverEstado(

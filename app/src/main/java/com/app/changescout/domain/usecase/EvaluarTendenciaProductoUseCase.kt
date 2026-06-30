@@ -94,7 +94,13 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         }
 
         val resultadoEvidencia = politicaEvidencia.evaluar(filtroNlp)
-        val evidenciaSuficiente = resultadoEvidencia.esSuficiente
+        val precioPromedioRealPen = filtroNlp.precioPromedioRealPen?.takeIf { precio -> precio > 0.0 }
+        val evidenciaSuficiente = resultadoEvidencia.esSuficiente && precioPromedioRealPen != null
+        val motivoEvidenciaInsuficiente = if (evidenciaSuficiente) {
+            null
+        } else {
+            resultadoEvidencia.motivoInsuficiente ?: "No se pudo estimar un precio promedio confiable en soles."
+        }
         val costoTotalUsd = calculadoraLandedCost.calcularCostoTotalUsd(producto.componentesCosto)
         val costoTotalPen = calculadoraLandedCost.calcularCostoTotalPen(
             costoTotalUsd = costoTotalUsd,
@@ -106,22 +112,15 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             costoTotalPen = costoTotalPen,
             margenObjetivoPct = margenObjetivoPct
         )
-        val brechaPrecioSugeridoMercadoPct = if (evidenciaSuficiente) {
-            filtroNlp.precioPromedioRealPen
-                ?.takeIf { precioPromedio -> precioPromedio > 0.0 }
-                ?.let { precioPromedio ->
-                    ((precioPromedio - precioVentaSugeridoPen) / precioVentaSugeridoPen) * 100.0
-                }
-        } else {
-            null
+        val precioParaMargen = precioPromedioRealPen.takeIf { evidenciaSuficiente }
+        val brechaPrecioSugeridoMercadoPct = precioParaMargen?.let { precioPromedio ->
+            ((precioPromedio - precioVentaSugeridoPen) / precioVentaSugeridoPen) * 100.0
         }
-        val margenNetoPct = if (evidenciaSuficiente) {
+        val margenNetoPct = precioParaMargen?.let { precioPromedio ->
             calculadoraLandedCost.calcularMargenNetoPct(
-                precioPromedioRealPen = requireNotNull(filtroNlp.precioPromedioRealPen),
+                precioPromedioRealPen = precioPromedio,
                 costoTotalPen = costoTotalPen
             )
-        } else {
-            null
         }
 
         val evaluacionBase = construirEvaluacionBase(
@@ -134,8 +133,9 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             precioVentaSugeridoPen = precioVentaSugeridoPen,
             brechaPrecioSugeridoMercadoPct = brechaPrecioSugeridoMercadoPct,
             margenNetoPct = margenNetoPct,
+            evidenciaSuficiente = evidenciaSuficiente,
             causaObsolescencia = causaObsolescencia,
-            motivoEvidenciaInsuficiente = resultadoEvidencia.motivoInsuficiente
+            motivoEvidenciaInsuficiente = motivoEvidenciaInsuficiente
         )
         val historial = repositorioEvaluacion.obtenerHistorial(
             productoId = producto.id,
@@ -173,6 +173,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
         precioVentaSugeridoPen: Double,
         brechaPrecioSugeridoMercadoPct: Double?,
         margenNetoPct: Double?,
+        evidenciaSuficiente: Boolean,
         causaObsolescencia: ErrorOperacion?,
         motivoEvidenciaInsuficiente: String?
     ): EvaluacionComercial {
@@ -191,7 +192,7 @@ class EvaluarTendenciaProductoUseCase @Inject constructor(
             metricasTendencia = null,
             veredicto = null,
             estadoEvaluacion = resolverEstadoEvaluacion(
-                evidenciaSuficiente = margenNetoPct != null,
+                evidenciaSuficiente = evidenciaSuficiente,
                 causaObsolescencia = causaObsolescencia
             ),
             evaluadoEn = Instant.now(clock),

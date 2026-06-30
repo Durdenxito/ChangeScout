@@ -33,22 +33,14 @@ fun Application.module(
     }
     configureAuth(authConfig)
 
-    val client = HttpClient(CIO) {
-        expectSuccess = true
-        install(ClientContentNegotiation) {
-            gson()
-        }
-        install(HttpTimeout) {
-            connectTimeoutMillis = 15_000
-            requestTimeoutMillis = maxOf(apifyConfig.timeoutMillis, nlpConfig.timeoutMillis)
-            socketTimeoutMillis = maxOf(apifyConfig.timeoutMillis, nlpConfig.timeoutMillis)
-        }
-    }
-    val marketplace = ApifyMarketplaceService(client, apifyConfig)
-    val nlp: NlpFiltroService = LlmNlpService(client, nlpConfig)
+    val marketplaceClient = httpClient(apifyConfig.timeoutMillis)
+    val nlpClient = httpClient(nlpConfig.timeoutMillis)
+    val marketplace = ApifyMarketplaceService(marketplaceClient, apifyConfig)
+    val nlp: NlpFiltroService = LlmNlpService(nlpClient, nlpConfig)
 
     monitor.subscribe(ApplicationStopping) {
-        client.close()
+        marketplaceClient.close()
+        nlpClient.close()
     }
 
     routing {
@@ -68,6 +60,20 @@ fun Application.module(
         } else {
             marketplaceRoutes(marketplace, apifyConfig)
             nlpRoutes(nlp)
+        }
+    }
+}
+
+private fun httpClient(timeoutMillis: Long): HttpClient {
+    return HttpClient(CIO) {
+        expectSuccess = true
+        install(ClientContentNegotiation) {
+            gson()
+        }
+        install(HttpTimeout) {
+            connectTimeoutMillis = 15_000
+            requestTimeoutMillis = timeoutMillis
+            socketTimeoutMillis = timeoutMillis
         }
     }
 }

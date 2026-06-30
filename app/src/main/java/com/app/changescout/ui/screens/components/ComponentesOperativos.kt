@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.ui.unit.dp
 import com.app.changescout.ui.theme.BullionGold
 import com.app.changescout.ui.theme.OutlineSubtle
@@ -57,6 +59,41 @@ fun FondoOperativo(
             .background(MaterialTheme.colorScheme.background),
         content = content
     )
+}
+
+@Composable
+fun LogoChangeScout(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Change ",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Text(
+            text = "Sc",
+            style = MaterialTheme.typography.headlineSmall,
+            color = BullionGold,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Icon(
+            imageVector = Icons.Outlined.Visibility,
+            contentDescription = null,
+            tint = BullionGold,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = "ut",
+            style = MaterialTheme.typography.headlineSmall,
+            color = BullionGold,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
 }
 
 @Composable

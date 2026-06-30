@@ -2,6 +2,7 @@ package com.app.changescout.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,13 +25,13 @@ fun NavegacionChangeScout(
         composable(DestinoApp.RADAR_PRODUCTOS) {
             PantallaRadarProductos(
                 onNavegarACuenta = {
-                    navController.navigate(DestinoApp.CUENTA)
+                    navController.navigateSingleTop(DestinoApp.CUENTA)
                 },
                 onNavegarAFormulario = {
-                    navController.navigate(DestinoApp.FORMULARIO_PRODUCTO)
+                    navController.navigateSingleTop(DestinoApp.FORMULARIO_PRODUCTO)
                 },
                 onNavegarADetalle = { productoId ->
-                    navController.navigate(DestinoApp.rutaDetalle(productoId))
+                    navController.navigateSingleTop(DestinoApp.rutaDetalle(productoId))
                 }
             )
         }
@@ -38,6 +39,9 @@ fun NavegacionChangeScout(
         composable(DestinoApp.CUENTA) {
             PantallaCuenta(
                 onNavegarAtras = { navController.popBackStack() },
+                onAgregarProducto = {
+                    navController.navigateSingleTop(DestinoApp.FORMULARIO_PRODUCTO)
+                },
                 onCerrarSesion = onCerrarSesion
             )
         }
@@ -104,7 +108,7 @@ fun NavegacionChangeScout(
             PantallaDetalleProducto(
                 onNavegarAtras = { navController.popBackStack() },
                 onNavegarAEditar = { producto ->
-                    navController.navigate(
+                    navController.navigateSingleTop(
                         DestinoApp.rutaEditar(
                             productoId = producto.id,
                             nombre = producto.nombre,
@@ -125,4 +129,10 @@ fun NavegacionChangeScout(
 
 private fun Double.toInput(): String {
     return if (this == 0.0) "" else toString()
+}
+
+private fun NavHostController.navigateSingleTop(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+    }
 }

@@ -73,7 +73,7 @@ object MigracionesBaseDatosChangeScout {
                 FROM snapshots_evaluacion_comercial
                 """.trimIndent()
             )
-            db.execSQL("DROP TABLE snapshots_evaluacion_comercial")
+            db.execSQL("DROP TABLE IF EXISTS snapshots_evaluacion_comercial")
             db.execSQL(
                 """
                 CREATE INDEX IF NOT EXISTS index_evaluaciones_comerciales_productoId

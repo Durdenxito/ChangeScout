@@ -2,6 +2,7 @@ package com.app.changescout.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.app.changescout.data.local.entity.EvaluacionComercialEntity
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +14,7 @@ interface EvaluacionComercialDao {
         SELECT *
         FROM evaluaciones_comerciales
         WHERE usuarioId = :usuarioId AND productoId = :productoId
-        ORDER BY evaluadoEnEpochMillis DESC
+        ORDER BY evaluadoEnEpochMillis DESC, evaluacionId DESC
         LIMIT 1
         """
     )
@@ -21,18 +22,18 @@ interface EvaluacionComercialDao {
 
     @Query(
         """
-        SELECT evaluacion.*
+        SELECT *
         FROM evaluaciones_comerciales AS evaluacion
-        INNER JOIN (
-            SELECT productoId, MAX(evaluadoEnEpochMillis) AS ultimoEvaluadoEn
-            FROM evaluaciones_comerciales
-            WHERE usuarioId = :usuarioId
-            GROUP BY productoId
-        ) AS ultimo
-        ON evaluacion.productoId = ultimo.productoId
-        AND evaluacion.evaluadoEnEpochMillis = ultimo.ultimoEvaluadoEn
         WHERE evaluacion.usuarioId = :usuarioId
-        ORDER BY evaluacion.evaluadoEnEpochMillis DESC
+        AND evaluacion.evaluacionId = (
+            SELECT candidata.evaluacionId
+            FROM evaluaciones_comerciales AS candidata
+            WHERE candidata.usuarioId = :usuarioId
+            AND candidata.productoId = evaluacion.productoId
+            ORDER BY candidata.evaluadoEnEpochMillis DESC, candidata.evaluacionId DESC
+            LIMIT 1
+        )
+        ORDER BY evaluacion.evaluadoEnEpochMillis DESC, evaluacion.evaluacionId DESC
         """
     )
     fun observarUltimosDeTodos(usuarioId: String): Flow<List<EvaluacionComercialEntity>>
@@ -42,7 +43,7 @@ interface EvaluacionComercialDao {
         SELECT *
         FROM evaluaciones_comerciales
         WHERE usuarioId = :usuarioId AND productoId = :productoId
-        ORDER BY evaluadoEnEpochMillis DESC
+        ORDER BY evaluadoEnEpochMillis DESC, evaluacionId DESC
         LIMIT :limite
         """
     )
@@ -52,6 +53,6 @@ interface EvaluacionComercialDao {
         limite: Int
     ): List<EvaluacionComercialEntity>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(evaluacion: EvaluacionComercialEntity): Long
 }

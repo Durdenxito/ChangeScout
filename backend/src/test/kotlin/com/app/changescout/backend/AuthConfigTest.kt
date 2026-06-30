@@ -8,8 +8,15 @@ import org.junit.Test
 
 class AuthConfigTest {
     @Test
-    fun fromMap_sinVariables_dejaAuthApagado() {
-        val config = AuthConfig.fromMap(emptyMap())
+    fun fromMap_sinVariables_fallaCerrado() {
+        assertThrows(AuthConfigException::class.java) {
+            AuthConfig.fromMap(emptyMap())
+        }
+    }
+
+    @Test
+    fun fromMap_authDesactivadoExplicitamente_dejaAuthApagado() {
+        val config = AuthConfig.fromMap(mapOf("AUTH_REQUIRED" to "false"))
 
         assertFalse(config.enabled)
     }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 @Immutable
 data class EstadoUiSesion(
+    val nombreUsuario: String = "",
     val email: String = "",
     val password: String = "",
     val sesion: SesionUsuario? = null,
@@ -26,6 +27,7 @@ data class EstadoUiSesion(
 }
 
 sealed interface EventoSesion {
+    data class NombreUsuarioCambiado(val valor: String) : EventoSesion
     data class EmailCambiado(val valor: String) : EventoSesion
     data class PasswordCambiado(val valor: String) : EventoSesion
     data object IniciarSesion : EventoSesion
@@ -44,6 +46,10 @@ class ViewModelSesion @Inject constructor(
 
     fun onEvent(event: EventoSesion) {
         when (event) {
+            is EventoSesion.NombreUsuarioCambiado -> _uiState.update {
+                it.copy(nombreUsuario = event.valor, mensaje = null)
+            }
+
             is EventoSesion.EmailCambiado -> _uiState.update {
                 it.copy(email = event.valor, mensaje = null)
             }
@@ -63,11 +69,24 @@ class ViewModelSesion @Inject constructor(
 
     private fun autenticar(crearCuenta: Boolean) {
         val estado = _uiState.value
+        val nombreUsuario = estado.nombreUsuario.trim()
         val email = estado.email.trim()
         val password = estado.password
         if (!email.contains("@") || password.length < 6) {
             _uiState.update {
-                it.copy(mensaje = "Ingresa un correo valido y una clave de al menos 6 caracteres.")
+                it.copy(
+                    password = "",
+                    mensaje = "Ingresa un correo valido y una clave de al menos 6 caracteres."
+                )
+            }
+            return
+        }
+        if (crearCuenta && nombreUsuario.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    password = "",
+                    mensaje = "Ingresa un nombre para identificar tu cuenta."
+                )
             }
             return
         }
@@ -75,9 +94,9 @@ class ViewModelSesion @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(estaCargando = true, mensaje = null) }
             val resultado = if (crearCuenta) {
-                repositorioSesion.crearCuenta(email, password)
+                repositorioSesion.crearCuenta(email, password, nombreUsuario)
             } else {
-                repositorioSesion.iniciarSesion(email, password)
+                repositorioSesion.iniciarSesion(email, password, nombreUsuario.takeIf { it.isNotBlank() })
             }
             _uiState.update { estadoActual ->
                 when (resultado) {
@@ -90,6 +109,7 @@ class ViewModelSesion @Inject constructor(
 
                     is ResultadoOperacion.Fallo -> estadoActual.copy(
                         estaCargando = false,
+                        password = "",
                         mensaje = resultado.error.mensaje
                     )
 

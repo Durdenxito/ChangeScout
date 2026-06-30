@@ -28,7 +28,7 @@ data class AuthConfig(
             val required = env.value("AUTH_REQUIRED")
                 ?.lowercase()
                 ?.toBooleanStrictOrNull()
-                ?: (issuer != null || jwksUrl != null)
+                ?: true
 
             if (!required) {
                 return AuthConfig(

@@ -19,14 +19,9 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import okhttp3.Authenticator
 import okhttp3.Interceptor
-import okhttp3.Request
 import okhttp3.Response
-import okhttp3.Route
+import retrofit2.Call
 import retrofit2.HttpException
 import retrofit2.http.Body
 import retrofit2.http.Header
@@ -50,17 +45,18 @@ interface SupabaseAuthApi {
     ): SupabaseSessionResponse
 
     @POST("auth/v1/token")
-    suspend fun refrescarSesion(
+    fun refrescarSesionBloqueante(
         @Header("apikey") apiKey: String,
         @Header("Authorization") authorization: String,
         @Query("grant_type") grantType: String = "refresh_token",
         @Body request: SupabaseRefreshRequest
-    ): SupabaseSessionResponse
+    ): Call<SupabaseSessionResponse>
 }
 
 data class SupabaseAuthRequest(
     val email: String,
-    val password: String
+    val password: String,
+    val data: Map<String, String>? = null
 )
 
 data class SupabaseRefreshRequest(
@@ -78,12 +74,21 @@ data class SupabaseSessionResponse(
 
 data class SupabaseUserDto(
     val id: String?,
-    val email: String?
-)
+    val email: String?,
+    @SerializedName("user_metadata")
+    val userMetadata: Map<String, Any?>? = null
+) {
+    fun nombreUsuario(): String? {
+        return listOf("name", "full_name", "display_name").firstNotNullOfOrNull { key ->
+            userMetadata?.get(key)?.toString()?.trim()?.takeIf { value -> value.isNotBlank() }
+        }
+    }
+}
 
 data class SesionUsuario(
     val userId: String,
-    val email: String
+    val email: String,
+    val nombreUsuario: String
 )
 
 @Singleton
@@ -97,8 +102,13 @@ class AlmacenSesion @Inject constructor(
     fun obtenerSesion(): SesionUsuario? {
         val userId = usuarioIdActual()
         val email = leer(KEY_EMAIL)
+        val nombreUsuario = leer(KEY_NOMBRE_USUARIO)
         return if (userId != null && email != null && obtenerToken() != null) {
-            SesionUsuario(userId = userId, email = email)
+            SesionUsuario(
+                userId = userId,
+                email = email,
+                nombreUsuario = nombreUsuario ?: email.nombreDesdeCorreo()
+            )
         } else {
             null
         }
@@ -108,24 +118,32 @@ class AlmacenSesion @Inject constructor(
 
     fun obtenerRefreshToken(): String? = leer(KEY_REFRESH_TOKEN)
 
-    fun guardar(sesion: SupabaseSessionResponse): SesionUsuario? {
+    fun guardar(
+        sesion: SupabaseSessionResponse,
+        nombreUsuarioLocal: String? = null
+    ): SesionUsuario? {
         val token = sesion.accessToken?.takeIf { value -> value.isNotBlank() } ?: return null
         val refreshToken = sesion.refreshToken?.takeIf { value -> value.isNotBlank() }
             ?: obtenerRefreshToken()
             ?: return null
         val userId = sesion.user?.id?.takeIf { value -> value.isNotBlank() } ?: return null
         val email = sesion.user.email?.takeIf { value -> value.isNotBlank() } ?: return null
-        preferencias.edit()
+        val nombreUsuario = sesion.user.nombreUsuario()
+            ?: nombreUsuarioLocal?.trim()?.takeIf { value -> value.isNotBlank() }
+            ?: email.nombreDesdeCorreo()
+        val guardado = preferencias.edit()
             .putString(KEY_TOKEN, token.cifrar())
             .putString(KEY_REFRESH_TOKEN, refreshToken.cifrar())
             .putString(KEY_USER_ID, userId.cifrar())
             .putString(KEY_EMAIL, email.cifrar())
-            .apply()
-        return SesionUsuario(userId = userId, email = email)
+            .putString(KEY_NOMBRE_USUARIO, nombreUsuario.cifrar())
+            .commit()
+        if (!guardado) return null
+        return SesionUsuario(userId = userId, email = email, nombreUsuario = nombreUsuario)
     }
 
     fun limpiar() {
-        preferencias.edit().clear().apply()
+        preferencias.edit().clear().commit()
     }
 
     private fun leer(key: String): String? {
@@ -178,6 +196,7 @@ class AlmacenSesion @Inject constructor(
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_USER_ID = "user_id"
         const val KEY_EMAIL = "email"
+        const val KEY_NOMBRE_USUARIO = "nombre_usuario"
         const val KEYSTORE_ALIAS = "changescout_session_key"
         const val CIFRADO = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
@@ -190,14 +209,17 @@ class RepositorioSesionSupabase @Inject constructor(
     private val api: SupabaseAuthApi,
     private val almacenSesion: AlmacenSesion
 ) {
-    private val mutexRefresh = Mutex()
-
     fun sesionActual(): SesionUsuario? = almacenSesion.obtenerSesion()
 
-    suspend fun iniciarSesion(email: String, password: String): ResultadoOperacion<SesionUsuario> {
+    suspend fun iniciarSesion(
+        email: String,
+        password: String,
+        nombreUsuarioLocal: String? = null
+    ): ResultadoOperacion<SesionUsuario> {
         return autenticar(
             email = email,
             password = password,
+            nombreUsuarioLocal = nombreUsuarioLocal,
             mensajeSinSesion = "No se pudo iniciar sesion."
         ) { request ->
             api.iniciarSesion(
@@ -208,16 +230,22 @@ class RepositorioSesionSupabase @Inject constructor(
         }
     }
 
-    suspend fun crearCuenta(email: String, password: String): ResultadoOperacion<SesionUsuario> {
+    suspend fun crearCuenta(
+        email: String,
+        password: String,
+        nombreUsuario: String
+    ): ResultadoOperacion<SesionUsuario> {
+        val nombreLimpio = nombreUsuario.trim()
         return autenticar(
             email = email,
             password = password,
+            nombreUsuarioLocal = nombreLimpio,
             mensajeSinSesion = "Cuenta creada. Revisa tu correo antes de iniciar sesion."
         ) { request ->
             api.crearCuenta(
                 apiKey = SupabaseAuthConfig.ANON_KEY,
                 authorization = SupabaseAuthConfig.authorizationHeader(),
-                request = request
+                request = request.copy(data = mapOf("name" to nombreLimpio))
             )
         }
     }
@@ -226,31 +254,35 @@ class RepositorioSesionSupabase @Inject constructor(
         almacenSesion.limpiar()
     }
 
-    suspend fun refrescarToken(): String? {
-        return mutexRefresh.withLock {
-            val refreshToken = almacenSesion.obtenerRefreshToken() ?: return@withLock null
-            try {
-                val response = api.refrescarSesion(
-                    apiKey = SupabaseAuthConfig.ANON_KEY,
-                    authorization = SupabaseAuthConfig.authorizationHeader(),
-                    request = SupabaseRefreshRequest(refreshToken)
-                )
-                almacenSesion.guardar(response)
-                response.accessToken
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: RuntimeException) {
-                almacenSesion.limpiar()
-                null
-            } catch (error: IOException) {
-                null
+    @Synchronized
+    fun refrescarTokenBloqueante(): String? {
+        val refreshToken = almacenSesion.obtenerRefreshToken() ?: return null
+        return try {
+            val response = api.refrescarSesionBloqueante(
+                apiKey = SupabaseAuthConfig.ANON_KEY,
+                authorization = SupabaseAuthConfig.authorizationHeader(),
+                request = SupabaseRefreshRequest(refreshToken)
+            ).execute()
+            if (!response.isSuccessful) {
+                if (response.code() == 401 || response.code() == 403) {
+                    almacenSesion.limpiar()
+                }
+                return null
             }
+            val sesion = response.body() ?: return null
+            almacenSesion.guardar(sesion)
+            sesion.accessToken
+        } catch (error: RuntimeException) {
+            null
+        } catch (error: IOException) {
+            null
         }
     }
 
     private suspend fun autenticar(
         email: String,
         password: String,
+        nombreUsuarioLocal: String?,
         mensajeSinSesion: String,
         call: suspend (SupabaseAuthRequest) -> SupabaseSessionResponse
     ): ResultadoOperacion<SesionUsuario> {
@@ -261,7 +293,7 @@ class RepositorioSesionSupabase @Inject constructor(
         }
         return try {
             val response = call(SupabaseAuthRequest(email = email.trim(), password = password))
-            val sesion = almacenSesion.guardar(response)
+            val sesion = almacenSesion.guardar(response, nombreUsuarioLocal)
                 ?: return ResultadoOperacion.Fallo(
                     ErrorOperacion.Validacion(mensajeSinSesion)
                 )
@@ -285,47 +317,33 @@ class RepositorioSesionSupabase @Inject constructor(
 }
 
 class InterceptorSesionBackend @Inject constructor(
-    private val almacenSesion: AlmacenSesion
+    private val almacenSesion: AlmacenSesion,
+    private val repositorioSesion: RepositorioSesionSupabase
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val token = almacenSesion.obtenerToken()
-        if (token == null || !request.url.toString().startsWith(BackendProxyConfig.BASE_URL)) {
+        if (!request.url.toString().startsWith(BackendProxyConfig.BASE_URL)) {
             return chain.proceed(request)
         }
-        return chain.proceed(
+
+        val token = almacenSesion.obtenerToken()
+        val requestConToken = token?.let {
             request.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .build()
+        } ?: request
+
+        val response = chain.proceed(requestConToken)
+        if (response.code != 401) return response
+
+        val nuevoToken = repositorioSesion.refrescarTokenBloqueante() ?: return response
+        response.close()
+
+        return chain.proceed(
+            request.newBuilder()
+                .header("Authorization", "Bearer $nuevoToken")
+                .build()
         )
-    }
-}
-
-class AutenticadorBackend @Inject constructor(
-    private val repositorioSesion: RepositorioSesionSupabase
-) : Authenticator {
-    override fun authenticate(route: Route?, response: Response): Request? {
-        if (
-            !response.request.url.toString().startsWith(BackendProxyConfig.BASE_URL) ||
-            response.intentosPrevios() >= 2
-        ) {
-            return null
-        }
-
-        val token = runBlocking { repositorioSesion.refrescarToken() } ?: return null
-        return response.request.newBuilder()
-            .header("Authorization", "Bearer $token")
-            .build()
-    }
-
-    private fun Response.intentosPrevios(): Int {
-        var actual: Response? = this
-        var total = 1
-        while (actual?.priorResponse != null) {
-            total++
-            actual = actual.priorResponse
-        }
-        return total
     }
 }
 
@@ -345,4 +363,8 @@ private fun String.normalizarBaseUrl(): String {
         valor.endsWith("/") -> valor
         else -> "$valor/"
     }
+}
+
+private fun String.nombreDesdeCorreo(): String {
+    return substringBefore("@").trim().takeIf { value -> value.isNotBlank() } ?: "Usuario"
 }

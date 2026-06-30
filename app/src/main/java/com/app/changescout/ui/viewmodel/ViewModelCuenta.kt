@@ -11,6 +11,7 @@ import com.app.changescout.domain.usecase.ObservarRadarProductosUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 @Immutable
 data class EstadoUiCuenta(
     val email: String = "",
+    val nombreUsuario: String = "",
     val totalProductos: Int = 0,
     val saludables: Int = 0,
     val precaucion: Int = 0,
@@ -28,7 +30,8 @@ data class EstadoUiCuenta(
     val sinDatos: Int = 0,
     val desactualizados: Int = 0,
     val ultimaLectura: String = "Sin lecturas todavia",
-    val estaCargando: Boolean = true
+    val estaCargando: Boolean = true,
+    val mensajeError: String? = null
 )
 
 @HiltViewModel
@@ -36,27 +39,42 @@ class ViewModelCuenta @Inject constructor(
     private val observarRadarProductosUseCase: ObservarRadarProductosUseCase,
     repositorioSesion: RepositorioSesionSupabase
 ) : ViewModel() {
-    private val email = repositorioSesion.sesionActual()?.email.orEmpty()
-    private val _uiState = MutableStateFlow(EstadoUiCuenta(email = email))
+    private val sesion = repositorioSesion.sesionActual()
+    private val email = sesion?.email.orEmpty()
+    private val nombreUsuario = sesion?.nombreUsuario.orEmpty()
+    private val _uiState = MutableStateFlow(
+        EstadoUiCuenta(email = email, nombreUsuario = nombreUsuario)
+    )
     val uiState: StateFlow<EstadoUiCuenta> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            observarRadarProductosUseCase().collect { radar ->
-                _uiState.update {
-                    crearResumenCuenta(
-                        email = email,
-                        radar = radar,
-                        ahora = Instant.now()
-                    )
+            observarRadarProductosUseCase()
+                .catch { error ->
+                    _uiState.update {
+                        it.copy(
+                            estaCargando = false,
+                            mensajeError = error.message ?: "No se pudo cargar el resumen de cuenta."
+                        )
+                    }
                 }
-            }
+                .collect { radar ->
+                    _uiState.update {
+                        crearResumenCuenta(
+                            email = email,
+                            nombreUsuario = nombreUsuario,
+                            radar = radar,
+                            ahora = Instant.now()
+                        )
+                    }
+                }
         }
     }
 }
 
 fun crearResumenCuenta(
     email: String,
+    nombreUsuario: String,
     radar: List<ProductoRadarItem>,
     ahora: Instant
 ): EstadoUiCuenta {
@@ -66,6 +84,7 @@ fun crearResumenCuenta(
 
     return EstadoUiCuenta(
         email = email,
+        nombreUsuario = nombreUsuario,
         totalProductos = radar.size,
         saludables = radar.count { it.ultimaEvaluacion?.veredicto == VeredictoComercial.SALUDABLE },
         precaucion = radar.count { it.ultimaEvaluacion?.veredicto == VeredictoComercial.PRECAUCION },

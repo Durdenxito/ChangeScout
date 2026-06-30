@@ -6,12 +6,13 @@ import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.usecase.ObservarRadarProductosUseCase
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ data class TarjetaProductoRadarUiModel(
     val nombre: String,
     val cantidadDisponible: Int,
     val margenNetoPct: Double?,
+    val precioVentaSugeridoPen: Double?,
     val veredicto: VeredictoComercial?,
     val estadoEvaluacion: EstadoEvaluacion?,
     val evaluadoEn: String?
@@ -52,30 +54,40 @@ class ViewModelRadarProductos @Inject constructor(
     private val _uiState = MutableStateFlow(EstadoUiRadarProductos())
     val uiState: StateFlow<EstadoUiRadarProductos> = _uiState.asStateFlow()
 
-    private val _uiEffect = MutableSharedFlow<EfectoRadarProductos>()
-    val uiEffect: SharedFlow<EfectoRadarProductos> = _uiEffect.asSharedFlow()
+    private val _uiEffect = Channel<EfectoRadarProductos>(Channel.BUFFERED)
+    val uiEffect: Flow<EfectoRadarProductos> = _uiEffect.receiveAsFlow()
 
     init {
         viewModelScope.launch {
-            observarRadarProductosUseCase().collect { radar ->
-                _uiState.update { estado ->
-                    estado.copy(
-                        productos = radar.map { item ->
-                            TarjetaProductoRadarUiModel(
-                                productoId = item.producto.id,
-                                nombre = item.producto.nombre,
-                                cantidadDisponible = item.producto.cantidadDisponible,
-                                margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
-                                veredicto = item.ultimaEvaluacion?.veredicto,
-                                estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
-                                evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.aTextoRelativo()
-                            )
-                        },
-                        estaCargando = false,
-                        mensajeError = null
-                    )
+            observarRadarProductosUseCase()
+                .catch { error ->
+                    _uiState.update { estado ->
+                        estado.copy(
+                            estaCargando = false,
+                            mensajeError = error.message ?: "No se pudo cargar el radar."
+                        )
+                    }
                 }
-            }
+                .collect { radar ->
+                    _uiState.update { estado ->
+                        estado.copy(
+                            productos = radar.map { item ->
+                                TarjetaProductoRadarUiModel(
+                                    productoId = item.producto.id,
+                                    nombre = item.producto.nombre,
+                                    cantidadDisponible = item.producto.cantidadDisponible,
+                                    margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
+                                    precioVentaSugeridoPen = item.ultimaEvaluacion?.precioVentaSugeridoPen,
+                                    veredicto = item.ultimaEvaluacion?.veredicto,
+                                    estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
+                                    evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.aTextoRelativo()
+                                )
+                            },
+                            estaCargando = false,
+                            mensajeError = null
+                        )
+                    }
+                }
         }
     }
 
@@ -83,11 +95,11 @@ class ViewModelRadarProductos @Inject constructor(
         viewModelScope.launch {
             when (event) {
                 EventoRadarProductos.AgregarProductoSolicitado -> {
-                    _uiEffect.emit(EfectoRadarProductos.NavegarAFormularioProducto)
+                    _uiEffect.send(EfectoRadarProductos.NavegarAFormularioProducto)
                 }
 
                 is EventoRadarProductos.ProductoSeleccionado -> {
-                    _uiEffect.emit(EfectoRadarProductos.NavegarADetalleProducto(event.productoId))
+                    _uiEffect.send(EfectoRadarProductos.NavegarADetalleProducto(event.productoId))
                 }
             }
         }

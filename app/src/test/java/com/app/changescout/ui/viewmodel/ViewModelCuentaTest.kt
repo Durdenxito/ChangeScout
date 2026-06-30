@@ -21,7 +21,7 @@ class ViewModelCuentaTest {
             ProductoRadarItem(producto(4, "Teclado"), ultimaEvaluacion = null)
         )
 
-        val resumen = crearResumenCuenta("demo@changescout.pe", radar, ahora)
+        val resumen = crearResumenCuenta("demo@changescout.pe", "Demo", radar, ahora)
 
         assertEquals(4, resumen.totalProductos)
         assertEquals(1, resumen.saludables)

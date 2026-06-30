@@ -16,8 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -38,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.app.changescout.ui.screens.components.BotonPrimario
 import com.app.changescout.ui.screens.components.BotonSecundario
 import com.app.changescout.ui.screens.components.FondoOperativo
-import com.app.changescout.ui.theme.BullionGold
+import com.app.changescout.ui.screens.components.LogoChangeScout
 import com.app.changescout.ui.theme.OutlineSubtle
 import com.app.changescout.ui.viewmodel.EstadoUiSesion
 import com.app.changescout.ui.viewmodel.EventoSesion
@@ -60,7 +59,7 @@ fun PantallaSesion(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LogoSesion()
+                LogoChangeScout()
                 Text(
                     text = "Consulta el mercado. Protege tus evaluaciones.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -82,6 +81,14 @@ fun PantallaSesion(
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        CampoSesion(
+                            value = state.nombreUsuario,
+                            onValueChange = { value -> onEvent(EventoSesion.NombreUsuarioCambiado(value)) },
+                            placeholder = "Nombre",
+                            leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                        )
+
                         CampoSesion(
                             value = state.email,
                             onValueChange = { value -> onEvent(EventoSesion.EmailCambiado(value)) },
@@ -128,35 +135,6 @@ fun PantallaSesion(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LogoSesion() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = "Change ",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Text(
-            text = "Sc",
-            style = MaterialTheme.typography.headlineLarge,
-            color = BullionGold,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Icon(
-            imageVector = Icons.Outlined.Visibility,
-            contentDescription = null,
-            tint = BullionGold
-        )
-        Text(
-            text = "ut",
-            style = MaterialTheme.typography.headlineLarge,
-            color = BullionGold,
-            fontWeight = FontWeight.ExtraBold
-        )
     }
 }
 

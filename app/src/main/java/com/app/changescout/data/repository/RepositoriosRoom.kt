@@ -17,30 +17,37 @@ class RepositorioProductoImportadoRoom(
     private val almacenSesion: AlmacenSesion
 ) : RepositorioProductoImportado {
     override fun observarTodos(): Flow<List<ProductoImportado>> {
-        return productoDao.observarTodos(usuarioIdActual())
+        val usuarioId = usuarioIdActual()
+        return productoDao.observarTodos(usuarioId)
             .map { productos -> productos.map { it.toDomain() } }
     }
 
     override fun observarPorId(productoId: Long): Flow<ProductoImportado?> {
-        return productoDao.observarPorId(usuarioIdActual(), productoId)
+        val usuarioId = usuarioIdActual()
+        return productoDao.observarPorId(usuarioId, productoId)
             .map { producto -> producto?.toDomain() }
     }
 
     override suspend fun obtenerPorId(productoId: Long): ProductoImportado? {
-        return productoDao.obtenerPorId(usuarioIdActual(), productoId)?.toDomain()
+        val usuarioId = usuarioIdActual()
+        return productoDao.obtenerPorId(usuarioId, productoId)?.toDomain()
     }
 
     override suspend fun upsert(producto: ProductoImportado): Long {
+        val usuarioId = usuarioIdActual()
         return productoDao.upsert(
-            ProductoImportadoEntity.fromDomain(producto, usuarioIdActual())
+            ProductoImportadoEntity.fromDomain(producto, usuarioId)
         )
     }
 
     override suspend fun eliminar(productoId: Long) {
-        productoDao.eliminar(usuarioIdActual(), productoId)
+        val usuarioId = usuarioIdActual()
+        productoDao.eliminar(usuarioId, productoId)
     }
 
-    private fun usuarioIdActual(): String = almacenSesion.usuarioIdActual() ?: USUARIO_SIN_SESION
+    private fun usuarioIdActual(): String = requireNotNull(almacenSesion.usuarioIdActual()) {
+        "Sesion no disponible."
+    }
 }
 
 class RepositorioEvaluacionComercialRoom(
@@ -48,12 +55,14 @@ class RepositorioEvaluacionComercialRoom(
     private val almacenSesion: AlmacenSesion
 ) : RepositorioEvaluacionComercial {
     override fun observarUltimo(productoId: Long): Flow<EvaluacionComercial?> {
-        return evaluacionDao.observarUltimo(usuarioIdActual(), productoId)
+        val usuarioId = usuarioIdActual()
+        return evaluacionDao.observarUltimo(usuarioId, productoId)
             .map { evaluacion -> evaluacion?.toDomain() }
     }
 
     override fun observarUltimosDeTodos(): Flow<List<EvaluacionComercial>> {
-        return evaluacionDao.observarUltimosDeTodos(usuarioIdActual())
+        val usuarioId = usuarioIdActual()
+        return evaluacionDao.observarUltimosDeTodos(usuarioId)
             .map { evaluaciones -> evaluaciones.map { it.toDomain() } }
     }
 
@@ -61,17 +70,19 @@ class RepositorioEvaluacionComercialRoom(
         productoId: Long,
         limite: Int
     ): List<EvaluacionComercial> {
-        return evaluacionDao.obtenerHistorial(usuarioIdActual(), productoId, limite)
+        val usuarioId = usuarioIdActual()
+        return evaluacionDao.obtenerHistorial(usuarioId, productoId, limite)
             .map { it.toDomain() }
     }
 
     override suspend fun guardarEvaluacion(evaluacion: EvaluacionComercial) {
+        val usuarioId = usuarioIdActual()
         evaluacionDao.insertar(
-            EvaluacionComercialEntity.fromDomain(evaluacion, usuarioIdActual())
+            EvaluacionComercialEntity.fromDomain(evaluacion, usuarioId)
         )
     }
 
-    private fun usuarioIdActual(): String = almacenSesion.usuarioIdActual() ?: USUARIO_SIN_SESION
+    private fun usuarioIdActual(): String = requireNotNull(almacenSesion.usuarioIdActual()) {
+        "Sesion no disponible."
+    }
 }
-
-private const val USUARIO_SIN_SESION = "sin_sesion"

@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
-import androidx.room.Update
 import com.app.changescout.data.local.entity.ProductoImportadoEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -24,7 +23,20 @@ interface ProductoImportadoDao {
         return if (producto.id == 0L) {
             insertar(producto)
         } else {
-            actualizar(producto)
+            val actualizados = actualizar(
+                id = producto.id,
+                usuarioId = producto.usuarioId,
+                nombre = producto.nombre,
+                queryCompetencia = producto.queryCompetencia,
+                precioFobUsd = producto.precioFobUsd,
+                fleteUsd = producto.fleteUsd,
+                seguroUsd = producto.seguroUsd,
+                arancelesUsd = producto.arancelesUsd,
+                otrosCargosUsd = producto.otrosCargosUsd,
+                cantidadDisponible = producto.cantidadDisponible,
+                notas = producto.notas
+            )
+            check(actualizados == 1) { "No se pudo actualizar el producto de esta sesion." }
             producto.id
         }
     }
@@ -32,8 +44,34 @@ interface ProductoImportadoDao {
     @Insert
     suspend fun insertar(producto: ProductoImportadoEntity): Long
 
-    @Update
-    suspend fun actualizar(producto: ProductoImportadoEntity)
+    @Query(
+        """
+        UPDATE productos_importados
+        SET nombre = :nombre,
+            queryCompetencia = :queryCompetencia,
+            precioFobUsd = :precioFobUsd,
+            fleteUsd = :fleteUsd,
+            seguroUsd = :seguroUsd,
+            arancelesUsd = :arancelesUsd,
+            otrosCargosUsd = :otrosCargosUsd,
+            cantidadDisponible = :cantidadDisponible,
+            notas = :notas
+        WHERE id = :id AND usuarioId = :usuarioId
+        """
+    )
+    suspend fun actualizar(
+        id: Long,
+        usuarioId: String,
+        nombre: String,
+        queryCompetencia: String,
+        precioFobUsd: Double,
+        fleteUsd: Double,
+        seguroUsd: Double,
+        arancelesUsd: Double,
+        otrosCargosUsd: Double,
+        cantidadDisponible: Int,
+        notas: String?
+    ): Int
 
     @Query("DELETE FROM productos_importados WHERE usuarioId = :usuarioId AND id = :productoId")
     suspend fun eliminar(usuarioId: String, productoId: Long)

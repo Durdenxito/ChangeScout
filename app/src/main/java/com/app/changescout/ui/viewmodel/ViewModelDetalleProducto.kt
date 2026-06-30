@@ -14,13 +14,13 @@ import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
 import com.app.changescout.domain.usecase.ObservarUltimaEvaluacionUseCase
 import com.app.changescout.ui.navigation.DestinoApp
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -64,8 +64,8 @@ class ViewModelDetalleProducto @Inject constructor(
     private val _uiState = MutableStateFlow(EstadoUiDetalleProducto())
     val uiState: StateFlow<EstadoUiDetalleProducto> = _uiState.asStateFlow()
 
-    private val _uiEffect = MutableSharedFlow<EfectoDetalleProducto>()
-    val uiEffect: SharedFlow<EfectoDetalleProducto> = _uiEffect.asSharedFlow()
+    private val _uiEffect = Channel<EfectoDetalleProducto>(Channel.BUFFERED)
+    val uiEffect: Flow<EfectoDetalleProducto> = _uiEffect.receiveAsFlow()
 
     init {
         viewModelScope.launch {
@@ -100,7 +100,7 @@ class ViewModelDetalleProducto @Inject constructor(
 
                 EventoDetalleProducto.EditarProductoSolicitado -> {
                     _uiState.value.producto?.let { producto ->
-                        _uiEffect.emit(EfectoDetalleProducto.NavegarAEditarProducto(producto))
+                        _uiEffect.send(EfectoDetalleProducto.NavegarAEditarProducto(producto))
                     }
                 }
 
@@ -117,7 +117,7 @@ class ViewModelDetalleProducto @Inject constructor(
                 }
 
                 EventoDetalleProducto.RegresarDesdeDetalleSolicitado -> {
-                    _uiEffect.emit(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
+                    _uiEffect.send(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
                 }
             }
         }
@@ -137,7 +137,7 @@ class ViewModelDetalleProducto @Inject constructor(
         runCatching {
             eliminarProductoImportadoUseCase(productoId)
         }.onSuccess {
-            _uiEffect.emit(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
+            _uiEffect.send(EfectoDetalleProducto.NavegarAtrasDesdeDetalle)
         }.onFailure { throwable ->
             val mensaje = throwable.message ?: "No se pudo eliminar el producto."
             _uiState.update {
@@ -146,7 +146,7 @@ class ViewModelDetalleProducto @Inject constructor(
                     mensajeError = mensaje
                 )
             }
-            _uiEffect.emit(EfectoDetalleProducto.MostrarMensajeDetalle(mensaje))
+            _uiEffect.send(EfectoDetalleProducto.MostrarMensajeDetalle(mensaje))
         }
     }
 
@@ -159,14 +159,14 @@ class ViewModelDetalleProducto @Inject constructor(
 
         when (val resultado = evaluarTendenciaProductoUseCase(productoId)) {
             is ResultadoOperacion.Exito -> {
-                _uiEffect.emit(
+                _uiEffect.send(
                     EfectoDetalleProducto.MostrarMensajeDetalle(
                         "Lectura actualizada: ${resultado.data.veredicto.aTextoPresentable()}."
                     )
                 )
             }
             is ResultadoOperacion.DatosObsoletos -> {
-                _uiEffect.emit(
+                _uiEffect.send(
                     EfectoDetalleProducto.MostrarMensajeDetalle(
                         "Lectura generada con datos obsoletos: ${resultado.causa.mensaje}"
                     )
@@ -176,7 +176,7 @@ class ViewModelDetalleProducto @Inject constructor(
                 _uiState.update { estado ->
                     estado.copy(mensajeError = resultado.error.mensaje)
                 }
-                _uiEffect.emit(
+                _uiEffect.send(
                     EfectoDetalleProducto.MostrarMensajeDetalle(resultado.error.mensaje)
                 )
             }

@@ -13,13 +13,13 @@ import com.app.changescout.domain.usecase.ObservarDetalleProductoUseCase
 import com.app.changescout.domain.usecase.PrevisualizarCompetenciaUseCase
 import com.app.changescout.ui.navigation.DestinoApp
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -116,8 +116,8 @@ class ViewModelFormularioProducto @Inject constructor(
     )
     val uiState: StateFlow<EstadoUiFormularioProducto> = _uiState.asStateFlow()
 
-    private val _uiEffect = MutableSharedFlow<EfectoFormularioProducto>()
-    val uiEffect: SharedFlow<EfectoFormularioProducto> = _uiEffect.asSharedFlow()
+    private val _uiEffect = Channel<EfectoFormularioProducto>(Channel.BUFFERED)
+    val uiEffect: Flow<EfectoFormularioProducto> = _uiEffect.receiveAsFlow()
 
     init {
         if (productoId > 0L && borradorEstaVacio()) {
@@ -152,7 +152,7 @@ class ViewModelFormularioProducto @Inject constructor(
             EventoFormularioProducto.GuardarProductoSolicitado -> guardarProducto()
             EventoFormularioProducto.RegresarDesdeFormularioSolicitado -> {
                 viewModelScope.launch {
-                    _uiEffect.emit(EfectoFormularioProducto.NavegarAtrasDesdeFormulario)
+                    _uiEffect.send(EfectoFormularioProducto.NavegarAtrasDesdeFormulario)
                 }
             }
         }
@@ -252,7 +252,7 @@ class ViewModelFormularioProducto @Inject constructor(
                 guardarProductoImportadoUseCase(construirProductoImportado())
             }.onSuccess {
                 limpiarBorrador()
-                _uiEffect.emit(EfectoFormularioProducto.NavegarAtrasDesdeFormulario)
+                _uiEffect.send(EfectoFormularioProducto.NavegarAtrasDesdeFormulario)
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
@@ -260,7 +260,7 @@ class ViewModelFormularioProducto @Inject constructor(
                         mensajeValidacion = throwable.message ?: "No se pudo guardar la ficha."
                     )
                 }
-                _uiEffect.emit(
+                _uiEffect.send(
                     EfectoFormularioProducto.MostrarMensajeFormulario(
                         _uiState.value.mensajeValidacion ?: "No se pudo guardar la ficha."
                     )

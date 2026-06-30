@@ -4,7 +4,6 @@ import com.app.changescout.domain.model.EstadoEvaluacion
 import com.app.changescout.domain.model.EvaluacionComercial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -34,13 +33,13 @@ class PoliticaObsolescenciaEvaluacionTest {
     }
 
     @Test
-    fun estaVigente_rechazaNowAnteriorAEvaluacion() {
-        assertThrows(IllegalArgumentException::class.java) {
+    fun estaVigente_toleraNowAnteriorAEvaluacion() {
+        assertTrue(
             politica.estaVigente(
                 evaluadoEn = base,
                 now = base.minusSeconds(1)
             )
-        }
+        )
     }
 
     @Test

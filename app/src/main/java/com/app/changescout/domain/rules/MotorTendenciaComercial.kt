@@ -97,7 +97,7 @@ class MotorTendenciaComercial @Inject constructor() {
         return ChronoUnit.DAYS
             .between(masAntiguo.evaluadoEn, actual.evaluadoEn)
             .toInt()
-            .coerceAtLeast(0)
+            .coerceAtLeast(1)
     }
 
     private companion object {

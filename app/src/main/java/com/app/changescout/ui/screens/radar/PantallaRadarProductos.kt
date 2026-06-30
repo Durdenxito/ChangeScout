@@ -14,13 +14,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.Warehouse
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -48,6 +54,7 @@ import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.ui.screens.components.ChipOperativo
 import com.app.changescout.ui.screens.components.EncabezadoSeccion
 import com.app.changescout.ui.screens.components.FondoOperativo
+import com.app.changescout.ui.screens.components.LogoChangeScout
 import com.app.changescout.ui.screens.components.MetricaResumida
 import com.app.changescout.ui.screens.components.TarjetaOperativa
 import com.app.changescout.ui.theme.ErrorSoft
@@ -121,10 +128,7 @@ private fun ContenidoRadarProductos(
                     containerColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 title = {
-                    Text(
-                        text = "ChangeScout",
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    LogoChangeScout()
                 },
                 actions = {
                     IconButton(onClick = onNavegarACuenta) {
@@ -150,10 +154,27 @@ private fun ContenidoRadarProductos(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                ResumenRadar(
-                    cantidadProductos = state.productos.size,
-                    cantidadPendiente = state.productos.count { it.estadoEvaluacion == null }
+                PrioridadRadar(
+                    productos = state.productos,
+                    onNuevoProducto = onNuevoProducto,
+                    onFiltroSeleccionado = { filtro = it.name }
                 )
+            }
+
+            state.mensajeError?.let { mensaje ->
+                item {
+                    TarjetaOperativa(acento = MaterialTheme.colorScheme.error) {
+                        EncabezadoSeccion(
+                            icono = Icons.Outlined.WarningAmber,
+                            titulo = "No se pudo cargar el radar"
+                        )
+                        Text(
+                            text = mensaje,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             if (!state.estaCargando && state.productos.isNotEmpty()) {
@@ -229,16 +250,58 @@ private fun FiltrosRadar(
 }
 
 @Composable
-private fun ResumenRadar(
-    cantidadProductos: Int,
-    cantidadPendiente: Int
+private fun PrioridadRadar(
+    productos: List<TarjetaProductoRadarUiModel>,
+    onNuevoProducto: () -> Unit,
+    onFiltroSeleccionado: (FiltroRadar) -> Unit
 ) {
-    TarjetaOperativa(
-        acento = MaterialTheme.colorScheme.primary
-    ) {
+    val enRiesgo = productos.count { FiltroRadar.EN_RIESGO.acepta(it) }
+    val sinLectura = productos.count { FiltroRadar.SIN_LECTURA.acepta(it) }
+    val saludables = productos.count { it.veredicto == VeredictoComercial.SALUDABLE }
+    val prioridad = when {
+        productos.isEmpty() -> PrioridadUi(
+            titulo = "Registra tu primer producto",
+            detalle = "Crea una ficha para calcular costo, margen y lectura comercial.",
+            accion = "Nuevo producto",
+            icono = Icons.Outlined.Inventory2,
+            acento = MaterialTheme.colorScheme.primary,
+            onClick = onNuevoProducto
+        )
+        enRiesgo > 0 -> PrioridadUi(
+            titulo = "Revisa $enRiesgo antes de reponer",
+            detalle = "Hay productos con margen sensible o senales de mercado negativas.",
+            accion = "Ver en riesgo",
+            icono = Icons.Outlined.WarningAmber,
+            acento = SignalGold,
+            onClick = { onFiltroSeleccionado(FiltroRadar.EN_RIESGO) }
+        )
+        sinLectura > 0 -> PrioridadUi(
+            titulo = "$sinLectura sin lectura comercial",
+            detalle = "Evalua estos productos para saber si conviene mantenerlos.",
+            accion = "Ver sin lectura",
+            icono = Icons.AutoMirrored.Outlined.HelpOutline,
+            acento = MaterialTheme.colorScheme.primary,
+            onClick = { onFiltroSeleccionado(FiltroRadar.SIN_LECTURA) }
+        )
+        else -> PrioridadUi(
+            titulo = "Inventario sin alertas activas",
+            detalle = "$saludables productos saludables. Agrega otro producto cuando tengas una nueva compra.",
+            accion = "Agregar producto",
+            icono = Icons.Outlined.CheckCircle,
+            acento = SignalMint,
+            onClick = onNuevoProducto
+        )
+    }
+
+    TarjetaOperativa(acento = prioridad.acento) {
         EncabezadoSeccion(
-            icono = Icons.Outlined.QueryStats,
-            titulo = "Antes de reponer stock"
+            icono = prioridad.icono,
+            titulo = prioridad.titulo
+        )
+        Text(
+            text = prioridad.detalle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -246,19 +309,46 @@ private fun ResumenRadar(
         ) {
             MetricaResumida(
                 titulo = "Productos",
-                valor = cantidadProductos.toString(),
+                valor = productos.size.toString(),
                 icono = Icons.Outlined.Warehouse,
                 modifier = Modifier.weight(1f)
             )
             MetricaResumida(
-                titulo = "Pendientes",
-                valor = cantidadPendiente.toString(),
+                titulo = "En riesgo",
+                valor = enRiesgo.toString(),
+                icono = Icons.Outlined.WarningAmber,
+                acento = SignalGold,
+                modifier = Modifier.weight(1f)
+            )
+            MetricaResumida(
+                titulo = "Sin lectura",
+                valor = sinLectura.toString(),
                 icono = Icons.Outlined.Schedule,
                 modifier = Modifier.weight(1f)
             )
         }
+        Button(
+            onClick = prioridad.onClick,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = prioridad.acento,
+                contentColor = MaterialTheme.colorScheme.background
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(prioridad.accion)
+        }
     }
 }
+
+private data class PrioridadUi(
+    val titulo: String,
+    val detalle: String,
+    val accion: String,
+    val icono: androidx.compose.ui.graphics.vector.ImageVector,
+    val acento: androidx.compose.ui.graphics.Color,
+    val onClick: () -> Unit
+)
 
 @Composable
 private fun TarjetaProductoRadar(
@@ -276,7 +366,10 @@ private fun TarjetaProductoRadar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -293,6 +386,15 @@ private fun TarjetaProductoRadar(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                ChipOperativo(
+                    texto = producto.evaluadoEn ?: "Sin lectura comercial",
+                    icono = Icons.Outlined.Schedule,
+                    contenedor = if (producto.evaluadoEn == null) {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                    }
+                )
             }
 
             producto.veredicto?.let { veredicto ->
@@ -324,13 +426,11 @@ private fun TarjetaProductoRadar(
                 icono = Icons.Outlined.QueryStats,
                 modifier = Modifier.weight(1f)
             )
-        }
-
-        producto.evaluadoEn?.let {
-            ChipOperativo(
-                texto = it,
-                icono = Icons.Outlined.QueryStats,
-                contenedor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+            MetricaResumida(
+                titulo = "Sugerido",
+                valor = producto.precioVentaSugeridoPen?.let { "S/ ${"%.2f".format(it)}" } ?: "--",
+                icono = Icons.Outlined.LocalOffer,
+                modifier = Modifier.weight(1f)
             )
         }
     }

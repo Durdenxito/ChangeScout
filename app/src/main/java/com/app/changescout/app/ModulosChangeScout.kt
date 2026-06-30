@@ -11,7 +11,6 @@ import com.app.changescout.data.api.marketplace.backend.BackendMarketplaceApi
 import com.app.changescout.data.api.marketplace.backend.ProveedorMarketplaceBackend
 import com.app.changescout.data.api.nlp.backend.BackendNlpApi
 import com.app.changescout.data.api.nlp.backend.ProveedorFiltroNlpBackend
-import com.app.changescout.data.auth.AutenticadorBackend
 import com.app.changescout.data.auth.AlmacenSesion
 import com.app.changescout.data.auth.InterceptorSesionBackend
 import com.app.changescout.data.auth.SupabaseAuthApi
@@ -65,12 +64,10 @@ object ModulosChangeScout {
     @ClienteHttpBackend
     fun provideOkHttpClientBackend(
         @ClienteHttpPublico okHttpClient: OkHttpClient,
-        interceptorSesionBackend: InterceptorSesionBackend,
-        autenticadorBackend: AutenticadorBackend
+        interceptorSesionBackend: InterceptorSesionBackend
     ): OkHttpClient {
         return okHttpClient.newBuilder()
             .addInterceptor(interceptorSesionBackend)
-            .authenticator(autenticadorBackend)
             .build()
     }
 
