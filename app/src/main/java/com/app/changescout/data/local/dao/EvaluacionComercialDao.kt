@@ -47,6 +47,21 @@ interface EvaluacionComercialDao {
         LIMIT :limite
         """
     )
+    fun observarHistorial(
+        usuarioId: String,
+        productoId: Long,
+        limite: Int
+    ): Flow<List<EvaluacionComercialEntity>>
+
+    @Query(
+        """
+        SELECT *
+        FROM evaluaciones_comerciales
+        WHERE usuarioId = :usuarioId AND productoId = :productoId
+        ORDER BY evaluadoEnEpochMillis DESC, evaluacionId DESC
+        LIMIT :limite
+        """
+    )
     suspend fun obtenerHistorial(
         usuarioId: String,
         productoId: Long,

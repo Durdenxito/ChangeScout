@@ -1,7 +1,9 @@
 package com.app.changescout.ui.screens.product.form
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -106,130 +108,184 @@ private fun ContenidoFormularioProducto(
             )
         }
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val horizontal = maxWidth > maxHeight
+            val contentModifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 20.dp)
             if (state.estaCargandoEdicion) {
-                TarjetaOperativa {
-                    EncabezadoSeccion(
-                        icono = Icons.Outlined.Description,
-                        titulo = "Cargando ficha"
-                    )
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                Column(modifier = contentModifier) {
+                    TarjetaOperativa {
+                        EncabezadoSeccion(
+                            icono = Icons.Outlined.Description,
+                            titulo = "Cargando ficha"
+                        )
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-                return@Column
-            }
-
-            TarjetaOperativa {
-                EncabezadoSeccion(
-                    icono = Icons.Outlined.Description,
-                    titulo = "Datos y costos"
-                )
-                CampoOperativo(
-                    value = state.nombre,
-                    onValueChange = { onEvent(EventoFormularioProducto.NombreCambiado(it)) },
-                    label = "Nombre del producto",
-                    leadingIcon = { Icon(Icons.Outlined.Inventory2, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.precioFobUsd,
-                    onValueChange = { onEvent(EventoFormularioProducto.PrecioFobUsdCambiado(it)) },
-                    label = "Precio del producto en origen (USD)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.fleteUsd,
-                    onValueChange = { onEvent(EventoFormularioProducto.FleteUsdCambiado(it)) },
-                    label = "Envio internacional (USD, opcional)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.seguroUsd,
-                    onValueChange = { onEvent(EventoFormularioProducto.SeguroUsdCambiado(it)) },
-                    label = "Seguro de carga (USD, opcional)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.arancelesUsd,
-                    onValueChange = { onEvent(EventoFormularioProducto.ArancelesUsdCambiado(it)) },
-                    label = "Impuestos de importacion (USD, opcional)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.otrosCargosUsd,
-                    onValueChange = { onEvent(EventoFormularioProducto.OtrosCargosUsdCambiado(it)) },
-                    label = "Gastos adicionales (USD, opcional)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.cantidadDisponible,
-                    onValueChange = { onEvent(EventoFormularioProducto.CantidadDisponibleCambiada(it)) },
-                    label = "Unidades disponibles",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    leadingIcon = { Icon(Icons.Outlined.Numbers, contentDescription = null) }
-                )
-                CampoOperativo(
-                    value = state.margenObjetivoPct,
-                    onValueChange = { onEvent(EventoFormularioProducto.MargenObjetivoCambiado(it)) },
-                    label = "Margen de ganancia objetivo (%)",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Icon(Icons.Outlined.Percent, contentDescription = null) }
-                )
-            }
-
-            TarjetaOperativa {
-                EncabezadoSeccion(
-                    icono = Icons.Outlined.Search,
-                    titulo = "Busqueda comparable"
-                )
-                CampoOperativo(
-                    value = state.queryCompetencia,
-                    onValueChange = { onEvent(EventoFormularioProducto.QueryCompetenciaCambiado(it)) },
-                    label = "Producto a buscar en el mercado",
-                    minLines = 3,
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
-                )
-            }
-
-            state.mensajeValidacion?.let { mensaje ->
-                TarjetaOperativa {
-                    Text(
-                        text = mensaje,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold
+            } else if (horizontal) {
+                Row(
+                    modifier = contentModifier,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    FormularioDatosCostos(
+                        state = state,
+                        onEvent = onEvent,
+                        modifier = Modifier.weight(1f)
                     )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        FormularioBusqueda(state, onEvent)
+                        MensajeValidacionFormulario(state.mensajeValidacion)
+                        BotonGuardarFormulario(state, onEvent)
+                    }
+                }
+            } else {
+                Column(
+                    modifier = contentModifier,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    FormularioDatosCostos(state, onEvent)
+                    FormularioBusqueda(state, onEvent)
+                    MensajeValidacionFormulario(state.mensajeValidacion)
+                    BotonGuardarFormulario(state, onEvent)
                 }
             }
+        }
+    }
+}
 
-            BotonPrimario(
-                texto = when {
-                    state.estaGuardando -> "Guardando ficha..."
-                    state.esEdicion -> "Guardar cambios"
-                    else -> "Guardar ficha"
-                },
-                icono = Icons.Outlined.Save,
-                onClick = {
-                    onEvent(EventoFormularioProducto.GuardarProductoSolicitado)
-                },
-                enabled = state.puedeEnviar,
-                modifier = Modifier.fillMaxWidth(),
-                cargando = state.estaGuardando
+@Composable
+private fun FormularioDatosCostos(
+    state: EstadoUiFormularioProducto,
+    onEvent: (EventoFormularioProducto) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TarjetaOperativa(modifier = modifier) {
+        EncabezadoSeccion(
+            icono = Icons.Outlined.Description,
+            titulo = "Datos y costos"
+        )
+        CampoOperativo(
+            value = state.nombre,
+            onValueChange = { onEvent(EventoFormularioProducto.NombreCambiado(it)) },
+            label = "Nombre del producto",
+            leadingIcon = { Icon(Icons.Outlined.Inventory2, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.precioFobUsd,
+            onValueChange = { onEvent(EventoFormularioProducto.PrecioFobUsdCambiado(it)) },
+            label = "Precio del producto en origen (USD)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.fleteUsd,
+            onValueChange = { onEvent(EventoFormularioProducto.FleteUsdCambiado(it)) },
+            label = "Envio internacional (USD, opcional)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.seguroUsd,
+            onValueChange = { onEvent(EventoFormularioProducto.SeguroUsdCambiado(it)) },
+            label = "Seguro de carga (USD, opcional)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.arancelesUsd,
+            onValueChange = { onEvent(EventoFormularioProducto.ArancelesUsdCambiado(it)) },
+            label = "Impuestos de importacion (USD, opcional)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.otrosCargosUsd,
+            onValueChange = { onEvent(EventoFormularioProducto.OtrosCargosUsdCambiado(it)) },
+            label = "Gastos adicionales (USD, opcional)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.AttachMoney, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.cantidadDisponible,
+            onValueChange = { onEvent(EventoFormularioProducto.CantidadDisponibleCambiada(it)) },
+            label = "Unidades disponibles",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            leadingIcon = { Icon(Icons.Outlined.Numbers, contentDescription = null) }
+        )
+        CampoOperativo(
+            value = state.margenObjetivoPct,
+            onValueChange = { onEvent(EventoFormularioProducto.MargenObjetivoCambiado(it)) },
+            label = "Margen de ganancia objetivo (%)",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = { Icon(Icons.Outlined.Percent, contentDescription = null) }
+        )
+    }
+}
+
+@Composable
+private fun FormularioBusqueda(
+    state: EstadoUiFormularioProducto,
+    onEvent: (EventoFormularioProducto) -> Unit
+) {
+    TarjetaOperativa {
+        EncabezadoSeccion(
+            icono = Icons.Outlined.Search,
+            titulo = "Busqueda comparable"
+        )
+        CampoOperativo(
+            value = state.queryCompetencia,
+            onValueChange = { onEvent(EventoFormularioProducto.QueryCompetenciaCambiado(it)) },
+            label = "Producto a buscar en el mercado",
+            minLines = 3,
+            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
+        )
+    }
+}
+
+@Composable
+private fun MensajeValidacionFormulario(mensaje: String?) {
+    mensaje?.let {
+        TarjetaOperativa {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
+}
+
+@Composable
+private fun BotonGuardarFormulario(
+    state: EstadoUiFormularioProducto,
+    onEvent: (EventoFormularioProducto) -> Unit
+) {
+    BotonPrimario(
+        texto = when {
+            state.estaGuardando -> "Guardando ficha..."
+            state.esEdicion -> "Guardar cambios"
+            else -> "Guardar ficha"
+        },
+        icono = Icons.Outlined.Save,
+        onClick = {
+            onEvent(EventoFormularioProducto.GuardarProductoSolicitado)
+        },
+        enabled = state.puedeEnviar,
+        modifier = Modifier.fillMaxWidth(),
+        cargando = state.estaGuardando
+    )
 }
 
 @Composable

@@ -1,7 +1,12 @@
 package com.app.changescout.ui.screens.account
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +33,7 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,17 +47,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.changescout.BuildConfig
 import com.app.changescout.ui.screens.components.FondoOperativo
 import com.app.changescout.ui.theme.OutlineSubtle
-import com.app.changescout.ui.theme.SignalGold
 import com.app.changescout.ui.theme.SignalMint
 import com.app.changescout.ui.theme.SignalRed
 import com.app.changescout.ui.viewmodel.EstadoUiCuenta
+import com.app.changescout.ui.viewmodel.LecturaCaducadaUi
 import com.app.changescout.ui.viewmodel.ViewModelCuenta
 
 private val PanelShape = RoundedCornerShape(8.dp)
@@ -59,16 +69,31 @@ private val ActionShape = RoundedCornerShape(12.dp)
 fun PantallaCuenta(
     onNavegarAtras: () -> Unit,
     onAgregarProducto: () -> Unit,
+    onVerCaducadas: () -> Unit,
     onCerrarSesion: () -> Unit,
     viewModel: ViewModelCuenta = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val selectorDatos = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val json = runCatching {
+            context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+        }.getOrNull()
+        if (json != null) {
+            viewModel.importarDatosLocales(json)
+        }
+    }
 
     FondoOperativo {
         ContenidoCuenta(
             state = state,
             onNavegarAtras = onNavegarAtras,
             onAgregarProducto = onAgregarProducto,
+            onVerCaducadas = onVerCaducadas,
+            onImportarDatos = { selectorDatos.launch("*/*") },
             onCerrarSesion = onCerrarSesion
         )
     }
@@ -79,52 +104,328 @@ private fun ContenidoCuenta(
     state: EstadoUiCuenta,
     onNavegarAtras: () -> Unit,
     onAgregarProducto: () -> Unit,
+    onVerCaducadas: () -> Unit,
+    onImportarDatos: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
     Scaffold(
         containerColor = Color.Transparent
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+        ) {
+            val horizontal = maxWidth > maxHeight
+            val scrollState = rememberScrollState()
+            val contentModifier = Modifier
+                .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(PaddingValues(horizontal = 20.dp, vertical = 14.dp)),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(scrollState)
+                .padding(
+                    PaddingValues(
+                        horizontal = if (horizontal) 12.dp else 20.dp,
+                        vertical = if (horizontal) 6.dp else 14.dp
+                    )
+                )
+
+            if (state.estaCargando) {
+                Column(
+                    modifier = contentModifier,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BotonVolverCuenta(
+                        onClick = onNavegarAtras,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(64.dp))
+                    EstadoCargaCuenta()
+                }
+            } else if (horizontal) {
+                val anchoPerfil = if (maxWidth < 720.dp) 240.dp else 300.dp
+                Row(
+                    modifier = contentModifier,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.width(anchoPerfil),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        BotonVolverCuenta(
+                            onClick = onNavegarAtras,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        CabeceraCuenta(state)
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        state.mensajeImportacion?.let { mensaje -> MensajeInfoCuenta(mensaje) }
+                        state.mensajeError?.let { mensaje -> MensajeCuenta(mensaje) }
+                        MenuCuenta(
+                            state = state,
+                            onVerCaducadas = onVerCaducadas,
+                            onVolverRadar = onNavegarAtras,
+                            onAgregarProducto = onAgregarProducto,
+                            onImportarDatos = onImportarDatos,
+                            onCerrarSesion = onCerrarSesion
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = contentModifier,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    BotonVolverCuenta(
+                        onClick = onNavegarAtras,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    CabeceraCuenta(state)
+                    Spacer(modifier = Modifier.height(20.dp))
+                    state.mensajeImportacion?.let { mensaje ->
+                        MensajeInfoCuenta(mensaje)
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                    state.mensajeError?.let { mensaje ->
+                        MensajeCuenta(mensaje)
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                    MenuCuenta(
+                        state = state,
+                        onVerCaducadas = onVerCaducadas,
+                        onVolverRadar = onNavegarAtras,
+                        onAgregarProducto = onAgregarProducto,
+                        onImportarDatos = onImportarDatos,
+                        onCerrarSesion = onCerrarSesion
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BotonVolverCuenta(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+            contentDescription = "Volver",
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+fun PantallaLecturasCaducadas(
+    onNavegarAtras: () -> Unit,
+    onNavegarADetalle: (Long) -> Unit,
+    viewModel: ViewModelCuenta = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    FondoOperativo {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            IconButton(
-                onClick = onNavegarAtras,
-                modifier = Modifier.align(Alignment.Start)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onBackground
+            item {
+                EncabezadoCuentaScreen(
+                    titulo = "Lecturas caducadas",
+                    onNavegarAtras = onNavegarAtras
                 )
             }
 
             if (state.estaCargando) {
-                Spacer(modifier = Modifier.height(64.dp))
-                EstadoCargaCuenta()
+                item { EstadoCargaCuenta() }
+            } else if (state.lecturasCaducadas.isEmpty()) {
+                item { LecturasAlDia() }
             } else {
-                CabeceraCuenta(state)
-                Spacer(modifier = Modifier.height(20.dp))
-                state.mensajeError?.let { mensaje ->
-                    MensajeCuenta(mensaje)
-                    Spacer(modifier = Modifier.height(14.dp))
+                items(
+                    items = state.lecturasCaducadas,
+                    key = { lectura -> lectura.productoId }
+                ) { lectura ->
+                    FilaLecturaCaducadaNavegable(
+                        lectura = lectura,
+                        onClick = { onNavegarADetalle(lectura.productoId) }
+                    )
                 }
-                ResumenCuenta(state)
-                Spacer(modifier = Modifier.height(22.dp))
-                EstadoInventario(state)
-                Spacer(modifier = Modifier.height(14.dp))
-                AccionesCuenta(
-                    onVolverRadar = onNavegarAtras,
-                    onAgregarProducto = onAgregarProducto,
-                    onCerrarSesion = onCerrarSesion
+            }
+        }
+    }
+}
+
+@Composable
+private fun EncabezadoCuentaScreen(
+    titulo: String,
+    onNavegarAtras: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onNavegarAtras) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = "Volver",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Text(
+            text = titulo,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+private fun FilaLecturaCaducadaNavegable(
+    lectura: LecturaCaducadaUi,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = PanelShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, SignalRed.copy(alpha = 0.35f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconoCaducidad()
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = lectura.producto,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${lectura.fecha} - ${lectura.antiguedad}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LecturasAlDia() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = PanelShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, SignalMint.copy(alpha = 0.35f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Visibility,
+                contentDescription = null,
+                tint = SignalMint,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Felicidades, tus lecturas estan al dia",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun MenuCuenta(
+    state: EstadoUiCuenta,
+    onVerCaducadas: () -> Unit,
+    onVolverRadar: () -> Unit,
+    onAgregarProducto: () -> Unit,
+    onImportarDatos: () -> Unit,
+    onCerrarSesion: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = PanelShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, OutlineSubtle)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            FilaAccion(
+                icono = Icons.Outlined.Schedule,
+                titulo = "Lecturas caducadas",
+                detalle = if (state.desactualizados > 0) {
+                    "${state.desactualizados} requieren nueva lectura"
+                } else {
+                    "Lecturas al dia"
+                },
+                acento = if (state.desactualizados > 0) SignalRed else SignalMint,
+                onClick = onVerCaducadas
+            )
+            FilaAccion(
+                icono = Icons.Outlined.Inventory2,
+                titulo = "Volver al radar",
+                detalle = "Revisar tus productos",
+                acento = MaterialTheme.colorScheme.primary,
+                onClick = onVolverRadar
+            )
+            FilaAccion(
+                icono = Icons.Outlined.AddCircleOutline,
+                titulo = "Agregar producto",
+                detalle = "Registrar una nueva ficha",
+                acento = SignalMint,
+                onClick = onAgregarProducto
+            )
+            if (BuildConfig.DEBUG) {
+                FilaAccion(
+                    icono = Icons.Outlined.AddCircleOutline,
+                    titulo = "Importar datos locales",
+                    detalle = if (state.estaImportandoDatos) "Importando archivo" else "Cargar JSON de prueba",
+                    acento = MaterialTheme.colorScheme.primary,
+                    onClick = onImportarDatos
+                )
+            }
+            FilaAccion(
+                icono = Icons.AutoMirrored.Outlined.Logout,
+                titulo = "Cerrar sesion",
+                detalle = "Salir de esta cuenta",
+                acento = SignalRed,
+                onClick = onCerrarSesion
+            )
         }
     }
 }
@@ -169,6 +470,23 @@ private fun MensajeCuenta(mensaje: String) {
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+@Composable
+private fun MensajeInfoCuenta(mensaje: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = PanelShape,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+    ) {
+        Text(
+            text = mensaje,
+            modifier = Modifier.padding(14.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
         )
     }
 }
@@ -242,108 +560,27 @@ private fun EstadoLecturaChip(texto: String) {
 }
 
 @Composable
-private fun ResumenCuenta(state: EstadoUiCuenta) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        MiniMetrica("Productos", state.totalProductos.toString(), MaterialTheme.colorScheme.onSurface)
-        MiniMetrica("Saludables", state.saludables.toString(), SignalMint)
-        MiniMetrica("En riesgo", state.enRiesgo().toString(), SignalGold)
-        MiniMetrica("Sin datos", state.sinDatos.toString(), MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun MiniMetrica(
-    titulo: String,
-    valor: String,
-    color: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = valor,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = titulo,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun EstadoInventario(state: EstadoUiCuenta) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = PanelShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, state.acentoEstado().copy(alpha = 0.35f))
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun IconoCaducidad() {
+    Box {
+        Surface(
+            shape = ActionShape,
+            color = SignalRed.copy(alpha = 0.13f)
         ) {
-            Text(
-                text = "Estado del inventario",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = state.mensajeEstado(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (state.desactualizados > 0) {
-                EstadoLecturaChip("${state.desactualizados} lecturas desactualizadas")
-            }
-        }
-    }
-}
-
-@Composable
-private fun AccionesCuenta(
-    onVolverRadar: () -> Unit,
-    onAgregarProducto: () -> Unit,
-    onCerrarSesion: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = PanelShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, OutlineSubtle)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            FilaAccion(
-                icono = Icons.Outlined.Inventory2,
-                titulo = "Volver al radar",
-                detalle = "Revisar tus productos",
-                acento = MaterialTheme.colorScheme.primary,
-                onClick = onVolverRadar
-            )
-            FilaAccion(
-                icono = Icons.Outlined.AddCircleOutline,
-                titulo = "Agregar producto",
-                detalle = "Registrar una nueva ficha",
-                acento = SignalMint,
-                onClick = onAgregarProducto
-            )
-            FilaAccion(
-                icono = Icons.AutoMirrored.Outlined.Logout,
-                titulo = "Cerrar sesion",
-                detalle = "Salir de esta cuenta",
-                acento = SignalRed,
-                onClick = onCerrarSesion
+            Icon(
+                imageVector = Icons.Outlined.Schedule,
+                contentDescription = null,
+                tint = SignalRed,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .size(20.dp)
             )
         }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(8.dp)
+                .background(SignalRed, CircleShape)
+        )
     }
 }
 
@@ -402,30 +639,6 @@ private fun FilaAccion(
                 modifier = Modifier.size(16.dp)
             )
         }
-    }
-}
-
-private fun EstadoUiCuenta.enRiesgo(): Int {
-    return precaucion + margenEnRiesgo + liquidarStock
-}
-
-@Composable
-private fun EstadoUiCuenta.acentoEstado(): Color {
-    return when {
-        liquidarStock > 0 || margenEnRiesgo > 0 -> SignalRed
-        precaucion > 0 -> SignalGold
-        saludables > 0 -> SignalMint
-        else -> MaterialTheme.colorScheme.primary
-    }
-}
-
-private fun EstadoUiCuenta.mensajeEstado(): String {
-    return when {
-        totalProductos == 0 -> "Aun no tienes productos registrados. Agrega una ficha para iniciar el radar."
-        enRiesgo() > 0 -> "$totalProductos productos registrados. ${enRiesgo()} requieren atencion antes de reponer."
-        sinDatos > 0 -> "$totalProductos productos registrados. $sinDatos todavia necesitan una lectura comercial."
-        saludables > 0 -> "$totalProductos productos registrados. El inventario no muestra alertas activas."
-        else -> "$totalProductos productos registrados. Actualiza una lectura para obtener un veredicto."
     }
 }
 

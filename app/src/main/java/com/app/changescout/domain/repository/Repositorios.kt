@@ -19,6 +19,7 @@ interface RepositorioProductoImportado {
 interface RepositorioEvaluacionComercial {
     fun observarUltimo(productoId: Long): Flow<EvaluacionComercial?>
     fun observarUltimosDeTodos(): Flow<List<EvaluacionComercial>>
+    fun observarHistorial(productoId: Long, limite: Int): Flow<List<EvaluacionComercial>>
     suspend fun obtenerHistorial(productoId: Long, limite: Int): List<EvaluacionComercial>
     suspend fun guardarEvaluacion(evaluacion: EvaluacionComercial)
 }

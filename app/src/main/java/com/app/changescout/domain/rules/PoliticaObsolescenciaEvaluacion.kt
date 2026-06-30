@@ -6,9 +6,9 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
-class PoliticaObsolescenciaEvaluacion @Inject constructor(
+class PoliticaObsolescenciaEvaluacion @Inject constructor() {
     private val ventanaVigencia: Duration = Duration.ofHours(12)
-) {
+
     fun estaVigente(
         evaluadoEn: Instant,
         now: Instant

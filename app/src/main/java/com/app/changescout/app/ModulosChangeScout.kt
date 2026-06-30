@@ -28,6 +28,7 @@ import com.app.changescout.domain.repository.RepositorioEvaluacionComercial
 import com.app.changescout.domain.repository.RepositorioProductoImportado
 import com.app.changescout.domain.rules.ClasificadorVeredictoComercial
 import com.app.changescout.domain.rules.PoliticaEvidencia
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,6 +48,10 @@ object ModulosChangeScout {
     @Provides
     @Singleton
     fun provideClock(): Clock = Clock.systemUTC()
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson = Gson()
 
     @Provides
     @Singleton
