@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.Immutable
 import com.app.changescout.domain.model.EstadoEvaluacion
+import com.app.changescout.domain.model.ProductoRadarItem
 import com.app.changescout.domain.model.VeredictoComercial
 import com.app.changescout.domain.usecase.ObservarRadarProductosUseCase
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +24,7 @@ import javax.inject.Inject
 data class EstadoUiRadarProductos(
     val productos: List<TarjetaProductoRadarUiModel> = emptyList(),
     val estaCargando: Boolean = true,
+    val estaActualizando: Boolean = false,
     val mensajeError: String? = null
 )
 
@@ -40,6 +43,7 @@ data class TarjetaProductoRadarUiModel(
 sealed interface EventoRadarProductos {
     data object AgregarProductoSolicitado : EventoRadarProductos
     data class ProductoSeleccionado(val productoId: Long) : EventoRadarProductos
+    data object RefrescarRadarSolicitado : EventoRadarProductos
 }
 
 sealed interface EfectoRadarProductos {
@@ -56,14 +60,27 @@ class ViewModelRadarProductos @Inject constructor(
 
     private val _uiEffect = Channel<EfectoRadarProductos>(Channel.BUFFERED)
     val uiEffect: Flow<EfectoRadarProductos> = _uiEffect.receiveAsFlow()
+    private var observarRadarJob: Job? = null
 
     init {
-        viewModelScope.launch {
+        observarRadar(mostrarCarga = true)
+    }
+
+    private fun observarRadar(mostrarCarga: Boolean) {
+        observarRadarJob?.cancel()
+        observarRadarJob = viewModelScope.launch {
+            _uiState.update { estado ->
+                estado.copy(
+                    estaCargando = mostrarCarga && estado.productos.isEmpty(),
+                    estaActualizando = !mostrarCarga
+                )
+            }
             observarRadarProductosUseCase()
                 .catch { error ->
                     _uiState.update { estado ->
                         estado.copy(
                             estaCargando = false,
+                            estaActualizando = false,
                             mensajeError = error.message ?: "No se pudo cargar el radar."
                         )
                     }
@@ -71,19 +88,9 @@ class ViewModelRadarProductos @Inject constructor(
                 .collect { radar ->
                     _uiState.update { estado ->
                         estado.copy(
-                            productos = radar.map { item ->
-                                TarjetaProductoRadarUiModel(
-                                    productoId = item.producto.id,
-                                    nombre = item.producto.nombre,
-                                    cantidadDisponible = item.producto.cantidadDisponible,
-                                    margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
-                                    precioVentaSugeridoPen = item.ultimaEvaluacion?.precioVentaSugeridoPen,
-                                    veredicto = item.ultimaEvaluacion?.veredicto,
-                                    estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
-                                    evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.aTextoRelativo()
-                                )
-                            },
+                            productos = radar.aTarjetasUi(),
                             estaCargando = false,
+                            estaActualizando = false,
                             mensajeError = null
                         )
                     }
@@ -101,8 +108,27 @@ class ViewModelRadarProductos @Inject constructor(
                 is EventoRadarProductos.ProductoSeleccionado -> {
                     _uiEffect.send(EfectoRadarProductos.NavegarADetalleProducto(event.productoId))
                 }
+
+                EventoRadarProductos.RefrescarRadarSolicitado -> {
+                    observarRadar(mostrarCarga = false)
+                }
             }
         }
+    }
+}
+
+private fun List<ProductoRadarItem>.aTarjetasUi(): List<TarjetaProductoRadarUiModel> {
+    return map { item ->
+        TarjetaProductoRadarUiModel(
+            productoId = item.producto.id,
+            nombre = item.producto.nombre,
+            cantidadDisponible = item.producto.cantidadDisponible,
+            margenNetoPct = item.ultimaEvaluacion?.margenNetoPct,
+            precioVentaSugeridoPen = item.ultimaEvaluacion?.precioVentaSugeridoPen,
+            veredicto = item.ultimaEvaluacion?.veredicto,
+            estadoEvaluacion = item.ultimaEvaluacion?.estadoEvaluacion,
+            evaluadoEn = item.ultimaEvaluacion?.evaluadoEn?.aTextoRelativo()
+        )
     }
 }
 

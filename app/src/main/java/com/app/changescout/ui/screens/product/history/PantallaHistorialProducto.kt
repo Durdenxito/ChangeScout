@@ -138,7 +138,7 @@ private fun ContenidoHistorialProducto(
                 item {
                     TarjetaOperativa {
                         Text(
-                            text = "Necesitas al menos tres lecturas para ver tendencia.",
+                            text = "Necesitas al menos dos lecturas para ver tendencia.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -495,7 +495,7 @@ private data class SerieHistorial(
     val color: Color
 )
 
-private const val MINIMO_LECTURAS_TENDENCIA = 3
+private const val MINIMO_LECTURAS_TENDENCIA = 2
 
 private fun VeredictoComercial?.etiqueta(): String {
     return when (this) {

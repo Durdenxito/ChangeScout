@@ -37,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -92,12 +93,16 @@ fun PantallaRadarProductos(
     val onSeleccionarProductoEstable = remember<(Long) -> Unit> {
         { productoId -> radarViewModel.onEvent(EventoRadarProductos.ProductoSeleccionado(productoId)) }
     }
+    val onRefrescarEstable = remember<() -> Unit> {
+        { radarViewModel.onEvent(EventoRadarProductos.RefrescarRadarSolicitado) }
+    }
 
     FondoOperativo {
         ContenidoRadarProductos(
             state = state,
             onNavegarACuenta = onNavegarACuenta,
             onNuevoProducto = onNuevoProductoEstable,
+            onRefrescar = onRefrescarEstable,
             onSeleccionarProducto = onSeleccionarProductoEstable
         )
     }
@@ -109,6 +114,7 @@ private fun ContenidoRadarProductos(
     state: EstadoUiRadarProductos,
     onNavegarACuenta: () -> Unit,
     onNuevoProducto: () -> Unit,
+    onRefrescar: () -> Unit,
     onSeleccionarProducto: (Long) -> Unit
 ) {
     var filtro by rememberSaveable {
@@ -152,96 +158,102 @@ private fun ContenidoRadarProductos(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = state.estaActualizando,
+            onRefresh = onRefrescar,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding)
         ) {
-            item {
-                PrioridadRadar(
-                    productos = productosVigentes,
-                    onNuevoProducto = onNuevoProducto,
-                    onFiltroSeleccionado = { filtro = it.name }
-                )
-            }
-
-            state.mensajeError?.let { mensaje ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    TarjetaOperativa(acento = MaterialTheme.colorScheme.error) {
-                        EncabezadoSeccion(
-                            icono = Icons.Outlined.WarningAmber,
-                            titulo = "No se pudo cargar el radar"
-                        )
-                        Text(
-                            text = mensaje,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            if (!state.estaCargando && productosVigentes.isNotEmpty()) {
-                item {
-                    FiltrosRadar(
-                        filtroActual = filtroActual,
+                    PrioridadRadar(
+                        productos = productosVigentes,
+                        onNuevoProducto = onNuevoProducto,
                         onFiltroSeleccionado = { filtro = it.name }
                     )
                 }
-            }
 
-            if (state.estaCargando) {
-                item {
-                    TarjetaOperativa {
-                        EncabezadoSeccion(
-                            icono = Icons.Outlined.Schedule,
-                            titulo = "Cargando productos"
+                state.mensajeError?.let { mensaje ->
+                    item {
+                        TarjetaOperativa(acento = MaterialTheme.colorScheme.error) {
+                            EncabezadoSeccion(
+                                icono = Icons.Outlined.WarningAmber,
+                                titulo = "No se pudo cargar el radar"
+                            )
+                            Text(
+                                text = mensaje,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                if (!state.estaCargando && productosVigentes.isNotEmpty()) {
+                    item {
+                        FiltrosRadar(
+                            filtroActual = filtroActual,
+                            onFiltroSeleccionado = { filtro = it.name }
                         )
                     }
                 }
-            } else if (state.productos.isEmpty()) {
-                item {
-                    TarjetaOperativa {
-                        EncabezadoSeccion(
-                            icono = Icons.Outlined.Inventory2,
-                            titulo = "Sin productos"
+
+                if (state.estaCargando) {
+                    item {
+                        TarjetaOperativa {
+                            EncabezadoSeccion(
+                                icono = Icons.Outlined.Schedule,
+                                titulo = "Cargando productos"
+                            )
+                        }
+                    }
+                } else if (state.productos.isEmpty()) {
+                    item {
+                        TarjetaOperativa {
+                            EncabezadoSeccion(
+                                icono = Icons.Outlined.Inventory2,
+                                titulo = "Sin productos"
+                            )
+                        }
+                    }
+                } else if (productosVigentes.isEmpty()) {
+                    item {
+                        TarjetaOperativa {
+                            EncabezadoSeccion(
+                                icono = Icons.Outlined.Schedule,
+                                titulo = "Sin lecturas al dia"
+                            )
+                            Text(
+                                text = "Tus productos evaluados pasaron a caducidad. Revisalos desde Cuenta.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (productosFiltrados.isEmpty()) {
+                    item {
+                        TarjetaOperativa {
+                            EncabezadoSeccion(
+                                icono = Icons.Outlined.Inventory2,
+                                titulo = "Sin productos en este filtro"
+                            )
+                        }
+                    }
+                } else {
+                    items(productosFiltrados, key = { it.productoId }) { producto ->
+                        val onClick = remember(producto.productoId) {
+                            { onSeleccionarProducto(producto.productoId) }
+                        }
+                        TarjetaProductoRadar(
+                            producto = producto,
+                            onClick = onClick
                         )
                     }
-                }
-            } else if (productosVigentes.isEmpty()) {
-                item {
-                    TarjetaOperativa {
-                        EncabezadoSeccion(
-                            icono = Icons.Outlined.Schedule,
-                            titulo = "Sin lecturas al dia"
-                        )
-                        Text(
-                            text = "Tus productos evaluados pasaron a caducidad. Revisalos desde Cuenta.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else if (productosFiltrados.isEmpty()) {
-                item {
-                    TarjetaOperativa {
-                        EncabezadoSeccion(
-                            icono = Icons.Outlined.Inventory2,
-                            titulo = "Sin productos en este filtro"
-                        )
-                    }
-                }
-            } else {
-                items(productosFiltrados, key = { it.productoId }) { producto ->
-                    val onClick = remember(producto.productoId) {
-                        { onSeleccionarProducto(producto.productoId) }
-                    }
-                    TarjetaProductoRadar(
-                        producto = producto,
-                        onClick = onClick
-                    )
                 }
             }
         }
